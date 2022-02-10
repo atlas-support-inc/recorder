@@ -3,7 +3,6 @@ import snapshot, {
   transformAttribute,
   visitSnapshot,
   cleanupSnapshot,
-  needMaskingText,
   IGNORED_NODE,
 } from './snapshot';
 import rebuild, {
@@ -24,6 +23,5 @@ export {
   transformAttribute,
   visitSnapshot,
   cleanupSnapshot,
-  needMaskingText,
   IGNORED_NODE,
 };
