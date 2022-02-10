@@ -3,6 +3,7 @@ import {
   MaskInputOptions,
   SlimDOMOptions,
   maskInputValue,
+  needMaskingText,
   MaskInputFn,
   MaskTextFn,
 } from 'rrweb-snapshot';
@@ -364,6 +365,8 @@ function initInputObserver(
   doc: Document,
   mirror: Mirror,
   blockClass: blockClass,
+  maskTextClass: maskTextClass,
+  maskTextSelector: string | null,
   ignoreClass: string,
   maskInputOptions: MaskInputOptions,
   maskInputFn: MaskInputFn | undefined,
@@ -399,7 +402,8 @@ function initInputObserver(
       maskInputOptions[
         (target as Element).tagName.toLowerCase() as keyof MaskInputOptions
       ] ||
-      maskInputOptions[type as keyof MaskInputOptions]
+      maskInputOptions[type as keyof MaskInputOptions] ||
+      needMaskingText(target as Node, maskTextClass, maskTextSelector)
     ) {
       text = maskInputValue({
         maskInputOptions,
@@ -407,6 +411,9 @@ function initInputObserver(
         type,
         value: text,
         maskInputFn,
+        node: target as Node,
+        maskTextClass,
+        maskTextSelector
       });
     }
     cbWithDedup(
@@ -993,6 +1000,8 @@ export function initObservers(
     o.doc,
     o.mirror,
     o.blockClass,
+    o.maskTextClass,
+    o.maskTextSelector,
     o.ignoreClass,
     o.maskInputOptions,
     o.maskInputFn,

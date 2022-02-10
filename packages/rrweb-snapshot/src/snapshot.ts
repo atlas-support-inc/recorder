@@ -11,7 +11,7 @@ import {
   MaskInputFn,
   KeepIframeSrcFn,
 } from './types';
-import { isElement, isShadowRoot, maskInputValue } from './utils';
+import { isElement, isShadowRoot, maskInputValue, needMaskingText } from './utils';
 
 let _id = 1;
 const tagNameRegex = new RegExp('[^a-z0-9-_:]');
@@ -269,40 +269,6 @@ export function _isBlockedElement(
   return false;
 }
 
-export function needMaskingText(
-  node: Node | null,
-  maskTextClass: string | RegExp,
-  maskTextSelector: string | null,
-): boolean {
-  if (!node) {
-    return false;
-  }
-  if (node.nodeType === node.ELEMENT_NODE) {
-    if (typeof maskTextClass === 'string') {
-      if ((node as HTMLElement).classList.contains(maskTextClass)) {
-        return true;
-      }
-    } else {
-      (node as HTMLElement).classList.forEach((className) => {
-        if (maskTextClass.test(className)) {
-          return true;
-        }
-      });
-    }
-    if (maskTextSelector) {
-      if ((node as HTMLElement).matches(maskTextSelector)) {
-        return true;
-      }
-    }
-    return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
-  }
-  if (node.nodeType === node.TEXT_NODE) {
-    // check parent node since text node do not have class name
-    return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
-  }
-  return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
-}
-
 // https://stackoverflow.com/a/36155560
 function onceIframeLoaded(
   iframeEl: HTMLIFrameElement,
@@ -485,6 +451,9 @@ function serializeNode(
             value,
             maskInputOptions,
             maskInputFn,
+            node: n,
+            maskTextClass,
+            maskTextSelector,
           });
         } else if ((n as HTMLInputElement).checked) {
           attributes.checked = (n as HTMLInputElement).checked;

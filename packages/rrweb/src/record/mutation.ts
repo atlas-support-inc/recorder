@@ -466,6 +466,9 @@ export default class MutationBuffer {
             type: (m.target as HTMLElement).getAttribute('type'),
             value,
             maskInputFn: this.maskInputFn,
+            node: m.target,
+            maskTextClass: this.maskTextClass,
+            maskTextSelector: this.maskTextSelector,
           });
         }
         if (isBlocked(m.target, this.blockClass) || value === m.oldValue) {
