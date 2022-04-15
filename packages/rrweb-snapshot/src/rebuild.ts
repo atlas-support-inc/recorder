@@ -280,6 +280,9 @@ function buildNode(
           }
         }
       }
+      if (tagName === 'input') {
+        (node as HTMLInputElement).readOnly = true;
+      }
       return node;
     case NodeType.Text:
       return doc.createTextNode(
