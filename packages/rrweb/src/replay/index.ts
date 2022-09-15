@@ -1374,6 +1374,8 @@ export class Replayer {
       return false;
     };
 
+    const notVirtualStylesBecauseOfSiblingIframe = new Set<number>();
+
     const appendNode = (mutation: addedNodeMutation) => {
       if (!this.iframe.contentDocument) {
         return console.warn('Looks like your replayer has been destroyed.');
@@ -1398,30 +1400,37 @@ export class Replayer {
         parentInDocument = this.iframe.contentDocument.body.contains(parent);
       }
 
-      const hasIframeChild =
-        ((parent as unknown) as HTMLElement).getElementsByTagName?.('iframe')
-          .length > 0;
-      /**
-       * Why !isIframeINode(parent)? If parent element is an iframe, iframe document can't be appended to virtual parent.
-       * Why !hasIframeChild? If we move iframe elements from dom to fragment document, we will lose the contentDocument of iframe. So we need to disable the virtual dom optimization if a parent node contains iframe elements.
-       */
-      if (
-        useVirtualParent &&
-        parentInDocument &&
-        !isIframeINode(parent) &&
-        !hasIframeChild
-      ) {
-        const virtualParent = (document.createDocumentFragment() as unknown) as INode;
-        this.mirror.map[mutation.parentId] = virtualParent;
-        this.fragmentParentMap.set(virtualParent, parent);
+      if (useVirtualParent) {
+        const parentHasIframeChild =
+          ((parent as unknown) as HTMLElement).getElementsByTagName?.('iframe')
+            .length > 0;
+        /**
+         * Why !isIframeINode(parent)? If parent element is an iframe, iframe document can't be appended to virtual parent.
+         * Why !parentHasIframeChild? If we move iframe elements from dom to fragment document, we will lose the contentDocument of iframe. So we need to disable the virtual dom optimization if a parent node contains iframe elements.
+         */
+        if (
+          parentInDocument &&
+          !parentHasIframeChild &&
+          !isIframeINode(parent) &&
+          // If it is style content inserted into <style> tag that supposed to be virtual, but
+          // was actually inserted into DOM because it has sibling iframe then we should insert
+          // this style directly into the DOM to prevent overriding styles when restoring data
+          !notVirtualStylesBecauseOfSiblingIframe.has(mutation.parentId)
+        ) {
+          const virtualParent = (document.createDocumentFragment() as unknown) as INode;
+          this.mirror.map[mutation.parentId] = virtualParent;
+          this.fragmentParentMap.set(virtualParent, parent);
 
-        // store the state, like scroll position, of child nodes before they are unmounted from dom
-        this.storeState(parent);
+          // store the state, like scroll position, of child nodes before they are unmounted from dom
+          this.storeState(parent);
 
-        while (parent.firstChild) {
-          virtualParent.appendChild(parent.firstChild);
+          while (parent.firstChild) {
+            virtualParent.appendChild(parent.firstChild);
+          }
+          parent = virtualParent;
+        } else if (parentHasIframeChild && "tagName" in mutation.node && mutation.node.tagName === "style") {
+          notVirtualStylesBecauseOfSiblingIframe.add(mutation.node.id);
         }
-        parent = virtualParent;
       }
 
       if (mutation.node.isShadow && hasShadowRoot(parent)) {
