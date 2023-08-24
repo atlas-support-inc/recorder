@@ -1659,8 +1659,13 @@ export class Replayer {
       });
     } else {
       try {
-        ((target as Node) as Element).scrollTop = d.y;
-        ((target as Node) as Element).scrollLeft = d.x;
+        // Fixes scroll for elements with scroll-behavior: smooth
+        // This must be fixed in rrweb 2.x
+        ((target as Node) as Element).scrollTo({
+          top: d.y,
+          left: d.x,
+          behavior: "auto",
+        });
       } catch (error) {
         /**
          * Seldomly we may found scroll target was removed before
