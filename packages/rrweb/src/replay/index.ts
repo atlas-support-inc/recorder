@@ -779,7 +779,7 @@ export class Replayer {
   ) {
     if (isIframeINode(builtNode)) {
       const mutationInQueue = this.newDocumentQueue.find(
-        (m) => m.parentId === builtNode.__sn.id,
+        (m) => m.parentId === builtNode.__sn_atlas.id,
       );
       if (mutationInQueue) {
         collected.push({ mutationInQueue, builtNode });
@@ -1319,7 +1319,7 @@ export class Replayer {
       if (parent) {
         let realTarget = null;
         const realParent =
-          '__sn' in parent ? this.fragmentParentMap.get(parent) : undefined;
+          '__sn_atlas' in parent ? this.fragmentParentMap.get(parent) : undefined;
         if (realParent && realParent.contains(target)) {
           parent = realParent;
         } else if (this.fragmentParentMap.has(target)) {
@@ -1478,9 +1478,9 @@ export class Replayer {
       }
 
       if (
-        '__sn' in parent &&
-        parent.__sn.type === NodeType.Element &&
-        parent.__sn.tagName === 'textarea' &&
+        '__sn_atlas' in parent &&
+        parent.__sn_atlas.type === NodeType.Element &&
+        parent.__sn_atlas.tagName === 'textarea' &&
         mutation.node.type === NodeType.Text
       ) {
         // https://github.com/rrweb-io/rrweb/issues/745
@@ -1515,7 +1515,7 @@ export class Replayer {
 
       if (isIframeINode(target)) {
         const mutationInQueue = this.newDocumentQueue.find(
-          (m) => m.parentId === target.__sn.id,
+          (m) => m.parentId === target.__sn_atlas.id,
         );
         if (mutationInQueue) {
           this.attachDocumentToIframe(mutationInQueue, target);
@@ -1650,7 +1650,7 @@ export class Replayer {
         left: d.x,
         behavior: 'smooth',
       });
-    } else if (target.__sn.type === NodeType.Document) {
+    } else if (target.__sn_atlas.type === NodeType.Document) {
       // nest iframe content document
       ((target as unknown) as Document).defaultView!.scrollTo({
         top: d.y,
@@ -1819,14 +1819,14 @@ export class Replayer {
    * @param parent real parent element
    */
   private restoreRealParent(frag: INode, parent: INode) {
-    this.mirror.map[parent.__sn.id] = parent;
+    this.mirror.map[parent.__sn_atlas.id] = parent;
     /**
      * If we have already set value attribute on textarea,
      * then we could not apply text content as default value any more.
      */
     if (
-      parent.__sn.type === NodeType.Element &&
-      parent.__sn.tagName === 'textarea' &&
+      parent.__sn_atlas.type === NodeType.Element &&
+      parent.__sn_atlas.tagName === 'textarea' &&
       frag.textContent
     ) {
       ((parent as unknown) as HTMLTextAreaElement).value = frag.textContent;

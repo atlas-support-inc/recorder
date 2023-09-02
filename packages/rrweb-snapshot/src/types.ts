@@ -68,7 +68,7 @@ export type tagMap = {
 };
 
 export interface INode extends Node {
-  __sn: serializedNodeWithId;
+  __sn_atlas: serializedNodeWithId;
 }
 
 export type idNodeMap = {

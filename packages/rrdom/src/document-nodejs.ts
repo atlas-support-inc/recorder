@@ -5,7 +5,7 @@ const nwsapi = require('nwsapi');
 const cssom = require('cssom');
 
 export abstract class RRNode {
-  __sn: serializedNodeWithId | undefined;
+  __sn_atlas: serializedNodeWithId | undefined;
   children: Array<RRNode> = [];
   parentElement: RRElement | null = null;
   parentNode: RRNode | null = null;
@@ -60,7 +60,7 @@ export abstract class RRNode {
   }
 
   toString(nodeName?: string) {
-    return `${JSON.stringify(this.__sn?.id) || ''} ${nodeName}`;
+    return `${JSON.stringify(this.__sn_atlas?.id) || ''} ${nodeName}`;
   }
 }
 
@@ -289,7 +289,7 @@ export class RRDocument extends RRNode {
     }
 
     const walk = function (node: INode) {
-      let serializedNodeWithId = node.__sn;
+      let serializedNodeWithId = node.__sn_atlas;
       let rrNode: RRNode;
       if (!serializedNodeWithId) {
         serializedNodeWithId = {
@@ -298,7 +298,7 @@ export class RRDocument extends RRNode {
           id: notSerializedId,
         };
         notSerializedId -= 1;
-        node.__sn = serializedNodeWithId;
+        node.__sn_atlas = serializedNodeWithId;
       }
       if (!this.mirror.has(serializedNodeWithId.id)) {
         switch (node.nodeType) {
@@ -390,7 +390,7 @@ export class RRDocument extends RRNode {
           default:
             return;
         }
-        rrNode.__sn = serializedNodeWithId;
+        rrNode.__sn_atlas = serializedNodeWithId;
         this.mirror.set(serializedNodeWithId.id, rrNode);
       } else {
         rrNode = this.mirror.get(serializedNodeWithId.id);
@@ -400,7 +400,7 @@ export class RRDocument extends RRNode {
       }
       const parentNode = node.parentElement || node.parentNode;
       if (parentNode) {
-        const parentSN = ((parentNode as unknown) as INode).__sn;
+        const parentSN = ((parentNode as unknown) as INode).__sn_atlas;
         const parentRRNode = this.mirror.get(parentSN.id);
         parentRRNode.appendChild(rrNode);
         rrNode.parentNode = parentRRNode;

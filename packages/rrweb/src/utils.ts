@@ -38,17 +38,17 @@ export function createMirror(): Mirror {
     map: {},
     getId(n) {
       // if n is not a serialized INode, use -1 as its id.
-      if (!n || !n.__sn) {
+      if (!n || !n.__sn_atlas) {
         return -1;
       }
-      return n.__sn.id;
+      return n.__sn_atlas.id;
     },
     getNode(id) {
       return this.map[id] || null;
     },
     // TODO: use a weakmap to get rid of manually memory management
     removeNodeFromMap(n) {
-      const id = n.__sn && n.__sn.id;
+      const id = n.__sn_atlas && n.__sn_atlas.id;
       delete this.map[id];
       if (n.childNodes) {
         n.childNodes.forEach((child) =>
@@ -248,8 +248,8 @@ export function isBlocked(node: Node | null, blockClass: blockClass): boolean {
 }
 
 export function isIgnored(n: Node | INode): boolean {
-  if ('__sn' in n) {
-    return (n as INode).__sn.id === IGNORED_NODE;
+  if ('__sn_atlas' in n) {
+    return (n as INode).__sn_atlas.id === IGNORED_NODE;
   }
   // The main part of the slimDOM check happens in
   // rrweb-snapshot::serializeNodeWithId
@@ -362,8 +362,8 @@ export class TreeIndex {
       this.removeIdSet.add(id);
       const node = mirror.getNode(id);
       node?.childNodes.forEach((childNode) => {
-        if ('__sn' in childNode) {
-          deepRemoveFromMirror(((childNode as unknown) as INode).__sn.id);
+        if ('__sn_atlas' in childNode) {
+          deepRemoveFromMirror(((childNode as unknown) as INode).__sn_atlas.id);
         }
       });
     };
@@ -573,7 +573,7 @@ export function iterateResolveTree(
 }
 
 type HTMLIFrameINode = HTMLIFrameElement & {
-  __sn: serializedNodeWithId;
+  __sn_atlas: serializedNodeWithId;
 };
 export type AppendedIframe = {
   mutationInQueue: addedNodeMutation;
@@ -583,9 +583,9 @@ export type AppendedIframe = {
 export function isIframeINode(
   node: INode | ShadowRoot,
 ): node is HTMLIFrameINode {
-  if ('__sn' in node) {
+  if ('__sn_atlas' in node) {
     return (
-      node.__sn.type === NodeType.Element && node.__sn.tagName === 'iframe'
+      node.__sn_atlas.type === NodeType.Element && node.__sn_atlas.tagName === 'iframe'
     );
   }
   // node can be document fragment when using the virtual parent feature

@@ -55,7 +55,7 @@ declare type ResolveTree = {
 export declare function queueToResolveTrees(queue: addedNodeMutation[]): ResolveTree[];
 export declare function iterateResolveTree(tree: ResolveTree, cb: (mutation: addedNodeMutation) => unknown): void;
 declare type HTMLIFrameINode = HTMLIFrameElement & {
-    __sn: serializedNodeWithId;
+    __sn_atlas: serializedNodeWithId;
 };
 export declare type AppendedIframe = {
     mutationInQueue: addedNodeMutation;

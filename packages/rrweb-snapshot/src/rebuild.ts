@@ -358,7 +358,7 @@ export function buildNodeWithSN(
     node = doc;
   }
 
-  (node as INode).__sn = n;
+  (node as INode).__sn_atlas = n;
   map[n.id] = node as INode;
 
   if (
@@ -406,7 +406,7 @@ function visit(idNodeMap: idNodeMap, onVisit: (node: INode) => void) {
 }
 
 function handleScroll(node: INode) {
-  const n = node.__sn;
+  const n = node.__sn_atlas;
   if (n.type !== NodeType.Element) {
     return;
   }
