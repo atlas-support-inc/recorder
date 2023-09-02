@@ -359,8 +359,8 @@ function serializeNode(
   } = options;
   // Only record root id when document object is not the base document
   let rootId: number | undefined;
-  if (((doc as unknown) as INode).__sn) {
-    const docId = ((doc as unknown) as INode).__sn.id;
+  if (((doc as unknown) as INode).__sn_atlas) {
+    const docId = ((doc as unknown) as INode).__sn_atlas.id;
     rootId = docId === 1 ? undefined : docId;
   }
   switch (n.nodeType) {
@@ -762,8 +762,8 @@ export function serializeNodeWithId(
 
   let id;
   // Try to reuse the previous id
-  if ('__sn' in n) {
-    id = n.__sn.id;
+  if ('__sn_atlas' in n) {
+    id = n.__sn_atlas.id;
   } else if (
     slimDOMExcluded(_serializedNode, slimDOMOptions) ||
     (!preserveWhiteSpace &&
@@ -776,7 +776,7 @@ export function serializeNodeWithId(
     id = genId();
   }
   const serializedNode = Object.assign(_serializedNode, { id });
-  (n as INode).__sn = serializedNode;
+  (n as INode).__sn_atlas = serializedNode;
   if (id === IGNORED_NODE) {
     return null; // slimDOM
   }

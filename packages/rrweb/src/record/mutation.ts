@@ -124,7 +124,7 @@ class DoubleLinkedList {
 
 const moveKey = (id: number, parentId: number) => `${id}@${parentId}`;
 function isINode(n: Node | INode): n is INode {
-  return '__sn' in n;
+  return '__sn_atlas' in n;
 }
 
 /**
@@ -589,10 +589,10 @@ export default class MutationBuffer {
       this.movedSet.add(n);
       let targetId: number | null = null;
       if (target && isINode(target)) {
-        targetId = target.__sn.id;
+        targetId = target.__sn_atlas.id;
       }
       if (targetId) {
-        this.movedMap[moveKey(n.__sn.id, targetId)] = true;
+        this.movedMap[moveKey(n.__sn_atlas.id, targetId)] = true;
       }
     } else {
       this.addedSet.add(n);

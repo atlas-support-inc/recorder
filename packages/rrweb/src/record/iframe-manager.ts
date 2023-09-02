@@ -22,7 +22,7 @@ export class IframeManager {
     this.mutationCb({
       adds: [
         {
-          parentId: iframeEl.__sn.id,
+          parentId: iframeEl.__sn_atlas.id,
           nextId: null,
           node: childSn,
         },
