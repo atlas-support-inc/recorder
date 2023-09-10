@@ -534,16 +534,17 @@ export class Replayer {
                 this.speedService.state.context.timer.speed
             ) {
               this.nextUserInteractionEvent = _event;
-              break;
             }
+            break;
           }
         }
         if (!this.nextUserInteractionEvent && !hasFollowingInteraction && this.service.state.context.events.length) {
           // Was not able to find a next user interaction event.
           // Use last one
-          this.nextUserInteractionEvent = this.service.state.context.events[
-            this.service.state.context.events.length - 1
-          ];
+          const lastEvent = this.service.state.context.events[this.service.state.context.events.length - 1];
+          if (lastEvent.timestamp! > event.timestamp!) {
+            this.nextUserInteractionEvent = lastEvent;
+          }
         }
 
         if (this.nextUserInteractionEvent) {
