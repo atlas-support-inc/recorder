@@ -45,6 +45,7 @@ export declare class Replayer {
     private setupDom;
     private handleResize;
     private applyEventsSynchronously;
+    private maybeSkipInactive;
     private getCastFn;
     private rebuildFullSnapshot;
     private insertStyleRules;

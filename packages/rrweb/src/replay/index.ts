@@ -290,37 +290,6 @@ export class Replayer {
       this.backToNormal();
     }
 
-    const currentDelay = this.speedService.state.context.timer.timeOffset;
-    if (this.config.skipInactive && !this.nextUserInteractionEvent) {
-      for (const _event of this.service.state.context.events) {
-        if (_event.delay! <= currentDelay) {
-          continue;
-        }
-        if (this.isUserInteraction(_event)) {
-          if (
-            _event.delay! - currentDelay >
-            SKIP_TIME_THRESHOLD *
-              this.speedService.state.context.timer.speed
-          ) {
-            this.nextUserInteractionEvent = _event;
-          }
-          break;
-        }
-        }
-      if (this.nextUserInteractionEvent) {
-        const skipTime =
-          this.nextUserInteractionEvent.delay! - currentDelay;
-        const payload = {
-          speed: Math.min(
-            Math.round(skipTime / SKIP_TIME_INTERVAL),
-            this.config.maxSpeed,
-          ),
-        };
-        this.speedService.send({ type: 'FAST_FORWARD', payload });
-        this.emitter.emit(ReplayerEvents.SkipStart, payload);
-      }
-    }
-
     if (typeof config.speed !== 'undefined') {
       this.speedService.send({
         type: 'SET_SPEED',
@@ -382,6 +351,7 @@ export class Replayer {
    * @param timeOffset number
    */
   public play(timeOffset = 0) {
+    this.backToNormal();
     if (this.service.state.matches('paused')) {
       this.service.send({ type: 'PLAY', payload: { timeOffset } });
     } else {
@@ -540,6 +510,60 @@ export class Replayer {
     this.touchActive = null;
   }
 
+  private maybeSkipInactive(event: eventWithTime, isSync: boolean) {
+    if (isSync) {
+      // do not check skip in sync
+      return;
+    }
+    if (event === this.nextUserInteractionEvent) {
+      this.nextUserInteractionEvent = null;
+      this.backToNormal();
+    }
+    if (this.config.skipInactive && !this.isUserInteraction(event)) {
+      if (!this.nextUserInteractionEvent) {
+        let hasFollowingInteraction = false;
+        for (const _event of this.service.state.context.events) {
+          if (_event.timestamp! <= event.timestamp!) {
+            continue;
+          }
+          if (this.isUserInteraction(_event)) {
+            hasFollowingInteraction = true;
+            if (
+              _event.delay! - event.delay! >
+              SKIP_TIME_THRESHOLD *
+                this.speedService.state.context.timer.speed
+            ) {
+              this.nextUserInteractionEvent = _event;
+            }
+            break;
+          }
+        }
+        if (!this.nextUserInteractionEvent && !hasFollowingInteraction && this.service.state.context.events.length) {
+          // Was not able to find a next user interaction event.
+          // Use last one
+          const lastEvent = this.service.state.context.events[this.service.state.context.events.length - 1];
+          if (lastEvent.timestamp! > event.timestamp!) {
+            this.nextUserInteractionEvent = lastEvent;
+          }
+        }
+
+        if (this.nextUserInteractionEvent) {
+          const skipTime =
+            this.nextUserInteractionEvent.delay! - event.delay!;
+          const payload = {
+            speed: Math.min(
+              Math.round(skipTime / SKIP_TIME_INTERVAL),
+              this.config.maxSpeed,
+            ),
+          };
+          this.speedService.send({ type: 'FAST_FORWARD', payload });
+          this.emitter.emit(ReplayerEvents.SkipStart, payload);
+        }
+      }
+    }
+  }
+
+
   private getCastFn(event: eventWithTime, isSync = false) {
     let castFn: undefined | (() => void);
     switch (event.type) {
@@ -582,43 +606,6 @@ export class Replayer {
       case EventType.IncrementalSnapshot:
         castFn = () => {
           this.applyIncremental(event, isSync);
-          if (isSync) {
-            // do not check skip in sync
-            return;
-          }
-          if (event === this.nextUserInteractionEvent) {
-            this.nextUserInteractionEvent = null;
-            this.backToNormal();
-          }
-          if (this.config.skipInactive && !this.nextUserInteractionEvent) {
-            for (const _event of this.service.state.context.events) {
-              if (_event.timestamp! <= event.timestamp!) {
-                continue;
-              }
-              if (this.isUserInteraction(_event)) {
-                if (
-                  _event.delay! - event.delay! >
-                  SKIP_TIME_THRESHOLD *
-                    this.speedService.state.context.timer.speed
-                ) {
-                  this.nextUserInteractionEvent = _event;
-                }
-                break;
-              }
-            }
-            if (this.nextUserInteractionEvent) {
-              const skipTime =
-                this.nextUserInteractionEvent.delay! - event.delay!;
-              const payload = {
-                speed: Math.min(
-                  Math.round(skipTime / SKIP_TIME_INTERVAL),
-                  this.config.maxSpeed,
-                ),
-              };
-              this.speedService.send({ type: 'FAST_FORWARD', payload });
-              this.emitter.emit(ReplayerEvents.SkipStart, payload);
-            }
-          }
         };
         break;
       default:
@@ -627,6 +614,7 @@ export class Replayer {
       if (castFn) {
         castFn();
       }
+      this.maybeSkipInactive(event, isSync);
 
       for (const plugin of this.config.plugins || []) {
         plugin.handler(event, isSync, { replayer: this });
