@@ -62,9 +62,7 @@ import {
   getNestedRule,
   getPositionsAndIndex,
 } from './virtual-styles';
-
-const SKIP_TIME_THRESHOLD = 10 * 1000;
-const SKIP_TIME_INTERVAL = 5 * 1000;
+import { isUserInteraction, SKIP_MIN_SPEED, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
 
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
@@ -283,6 +281,13 @@ export class Replayer {
 
   public setConfig(config: Partial<playerConfig>) {
     Object.keys(config).forEach((key) => {
+      // If skipInactive was changed from false -> true, check if it can be skipped
+      if (key === 'skipInactive' && !this.config.skipInactive && config[key] && this.service.state.context.lastPlayedEvent) {
+        this.config.skipInactive = true;
+        this.maybeSkipInactive(this.service.state.context.lastPlayedEvent, false);
+        return;
+      }
+
       // @ts-ignore
       this.config[key] = config[key];
     });
@@ -351,7 +356,6 @@ export class Replayer {
    * @param timeOffset number
    */
   public play(timeOffset = 0) {
-    this.backToNormal();
     if (this.service.state.matches('paused')) {
       this.service.send({ type: 'PLAY', payload: { timeOffset } });
     } else {
@@ -511,50 +515,51 @@ export class Replayer {
   }
 
   private maybeSkipInactive(event: eventWithTime, isSync: boolean) {
-    if (isSync) {
-      // do not check skip in sync
-      return;
-    }
     if (event === this.nextUserInteractionEvent) {
       this.nextUserInteractionEvent = null;
       this.backToNormal();
     }
-    if (this.config.skipInactive && !this.isUserInteraction(event)) {
+    if (this.config.skipInactive && !isUserInteraction(event)) {
       if (!this.nextUserInteractionEvent) {
         let hasFollowingInteraction = false;
         for (const _event of this.service.state.context.events) {
           if (_event.timestamp! <= event.timestamp!) {
             continue;
           }
-          if (this.isUserInteraction(_event)) {
+
+          const _eventDelay = isSync ? _event.timestamp : _event.delay;
+          const eventDelay = isSync ? event.timestamp : event.delay;
+
+          if (isUserInteraction(_event)) {
             hasFollowingInteraction = true;
             if (
-              _event.delay! - event.delay! >
-              SKIP_TIME_THRESHOLD *
-                this.speedService.state.context.timer.speed
+              _eventDelay! - eventDelay! >
+              SKIP_TIME_THRESHOLD
             ) {
               this.nextUserInteractionEvent = _event;
             }
             break;
           }
         }
+
         if (!this.nextUserInteractionEvent && !hasFollowingInteraction && this.service.state.context.events.length) {
           // Was not able to find a next user interaction event.
           // Use last one
           const lastEvent = this.service.state.context.events[this.service.state.context.events.length - 1];
-          if (lastEvent.timestamp! > event.timestamp!) {
+          if (lastEvent.timestamp > event.timestamp) {
             this.nextUserInteractionEvent = lastEvent;
           }
         }
 
         if (this.nextUserInteractionEvent) {
           const skipTime =
-            this.nextUserInteractionEvent.delay! - event.delay!;
+            this.nextUserInteractionEvent.timestamp - event.timestamp;
+
           const payload = {
-            speed: Math.min(
+            speed: Math.max(
               Math.round(skipTime / SKIP_TIME_INTERVAL),
-              this.config.maxSpeed,
-            ),
+              SKIP_MIN_SPEED
+            )
           };
           this.speedService.send({ type: 'FAST_FORWARD', payload });
           this.emitter.emit(ReplayerEvents.SkipStart, payload);
@@ -1778,16 +1783,6 @@ export class Replayer {
       }
       currentEl = currentEl.parentElement;
     }
-  }
-
-  private isUserInteraction(event: eventWithTime): boolean {
-    if (event.type !== EventType.IncrementalSnapshot) {
-      return false;
-    }
-    return (
-      event.data.source > IncrementalSource.Mutation &&
-      event.data.source <= IncrementalSource.Input
-    );
   }
 
   private backToNormal() {
