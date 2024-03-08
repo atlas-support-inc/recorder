@@ -615,3 +615,10 @@ declare global {
 }
 
 export type IWindow = Window & typeof globalThis;
+
+export type TInactivityRange = {
+  startMs: number;
+  startTime: string;
+  endMs: number;
+  endTime: string;
+};

@@ -2,6 +2,7 @@ import record from './record';
 import { Replayer } from './replay';
 import { _mirror } from './utils';
 import * as utils from './utils';
+import * as replayUtils from './replay/utils';
 
 export {
   EventType,
@@ -20,4 +21,5 @@ export {
   Replayer,
   _mirror as mirror,
   utils,
+  replayUtils,
 };
