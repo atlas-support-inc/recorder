@@ -39,6 +39,7 @@ export declare type metaEvent = {
     type: EventType.Meta;
     data: {
         href: string;
+        title: string;
         width: number;
         height: number;
     };

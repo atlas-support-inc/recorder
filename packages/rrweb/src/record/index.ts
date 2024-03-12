@@ -212,6 +212,7 @@ function record<T = eventWithTime>(
         type: EventType.Meta,
         data: {
           href: window.location.href,
+          title: document.title,
           width: getWindowWidth(),
           height: getWindowHeight(),
         },
