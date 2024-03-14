@@ -289,7 +289,7 @@ export class RRDocument extends RRNode {
     }
 
     const walk = function (node: INode) {
-      let serializedNodeWithId = node.__sn_atlas;
+      let serializedNodeWithId = (node as any).__sn_atlas;
       let rrNode: RRNode;
       if (!serializedNodeWithId) {
         serializedNodeWithId = {
@@ -298,7 +298,7 @@ export class RRDocument extends RRNode {
           id: notSerializedId,
         };
         notSerializedId -= 1;
-        node.__sn_atlas = serializedNodeWithId;
+        (node as any).__sn_atlas = serializedNodeWithId;
       }
       if (!this.mirror.has(serializedNodeWithId.id)) {
         switch (node.nodeType) {
@@ -400,7 +400,7 @@ export class RRDocument extends RRNode {
       }
       const parentNode = node.parentElement || node.parentNode;
       if (parentNode) {
-        const parentSN = ((parentNode as unknown) as INode).__sn_atlas;
+        const parentSN = (parentNode as any).__sn_atlas;
         const parentRRNode = this.mirror.get(parentSN.id);
         parentRRNode.appendChild(rrNode);
         rrNode.parentNode = parentRRNode;
