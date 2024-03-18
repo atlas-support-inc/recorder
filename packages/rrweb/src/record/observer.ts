@@ -6,6 +6,7 @@ import {
   needMaskingText,
   MaskInputFn,
   MaskTextFn,
+  TMaskElementsOptions,
 } from 'rrweb-snapshot';
 import { FontFaceDescriptors, FontFaceSet } from 'css-font-loading-module';
 import {
@@ -93,6 +94,7 @@ export function initMutationObserver(
   blockSelector: string | null,
   maskTextClass: maskTextClass,
   maskTextSelector: string | null,
+  maskElementsOptions: TMaskElementsOptions,
   inlineStylesheet: boolean,
   maskInputOptions: MaskInputOptions,
   maskTextFn: MaskTextFn | undefined,
@@ -114,6 +116,7 @@ export function initMutationObserver(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskElementsOptions,
     inlineStylesheet,
     maskInputOptions,
     maskTextFn,
@@ -367,6 +370,7 @@ function initInputObserver(
   blockClass: blockClass,
   maskTextClass: maskTextClass,
   maskTextSelector: string | null,
+  maskElementsOptions: TMaskElementsOptions,
   ignoreClass: string,
   maskInputOptions: MaskInputOptions,
   maskInputFn: MaskInputFn | undefined,
@@ -413,7 +417,8 @@ function initInputObserver(
         maskInputFn,
         node: target as Node,
         maskTextClass,
-        maskTextSelector
+        maskTextSelector,
+        maskElementsOptions
       });
     }
     cbWithDedup(
@@ -962,6 +967,7 @@ export function initObservers(
     o.blockSelector,
     o.maskTextClass,
     o.maskTextSelector,
+    o.maskElementsOptions,
     o.inlineStylesheet,
     o.maskInputOptions,
     o.maskTextFn,
@@ -1002,6 +1008,7 @@ export function initObservers(
     o.blockClass,
     o.maskTextClass,
     o.maskTextSelector,
+    o.maskElementsOptions,
     o.ignoreClass,
     o.maskInputOptions,
     o.maskInputFn,

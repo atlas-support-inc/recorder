@@ -10,8 +10,15 @@ import {
   MaskTextFn,
   MaskInputFn,
   KeepIframeSrcFn,
+  TMaskElementsOptions,
 } from './types';
-import { isElement, isShadowRoot, maskInputValue, needMaskingText } from './utils';
+import {
+  isElement,
+  isMaskedByGlobalRule,
+  isShadowRoot,
+  maskInputValue,
+  needMaskingText,
+} from './utils';
 
 let _id = 1;
 const tagNameRegex = new RegExp('[^a-z0-9-_:]');
@@ -334,6 +341,7 @@ function serializeNode(
     blockSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
+    maskElementsOptions: TMaskElementsOptions;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;
     maskTextFn: MaskTextFn | undefined;
@@ -349,6 +357,7 @@ function serializeNode(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskElementsOptions,
     inlineStylesheet,
     maskInputOptions = {},
     maskTextFn,
@@ -454,6 +463,7 @@ function serializeNode(
             node: n,
             maskTextClass,
             maskTextSelector,
+            maskElementsOptions,
           });
         } else if ((n as HTMLInputElement).checked) {
           attributes.checked = (n as HTMLInputElement).checked;
@@ -521,6 +531,14 @@ function serializeNode(
           rr_height: `${height}px`,
         };
       }
+
+      if (isMaskedByGlobalRule(n, tagName, maskElementsOptions)) {
+        if (tagName === 'img') {
+          attributes.src = '';
+          attributes.srcset = '';
+        }
+      }
+
       // iframe
       if (tagName === 'iframe' && !keepIframeSrcFn(attributes.src as string)) {
         if (!(n as HTMLIFrameElement).contentDocument) {
@@ -566,7 +584,8 @@ function serializeNode(
       if (
         !isStyle &&
         !isScript &&
-        needMaskingText(n, maskTextClass, maskTextSelector) &&
+        (needMaskingText(n, maskTextClass, maskTextSelector)
+          || isMaskedByGlobalRule(n.parentNode, parentTagName || '', maskElementsOptions)) &&
         textContent
       ) {
         textContent = maskTextFn
@@ -704,6 +723,7 @@ export function serializeNodeWithId(
     blockSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
+    maskElementsOptions: TMaskElementsOptions;
     skipChild: boolean;
     inlineStylesheet: boolean;
     maskInputOptions?: MaskInputOptions;
@@ -726,6 +746,7 @@ export function serializeNodeWithId(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskElementsOptions,
     skipChild = false,
     inlineStylesheet = true,
     maskInputOptions = {},
@@ -746,6 +767,7 @@ export function serializeNodeWithId(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskElementsOptions,
     inlineStylesheet,
     maskInputOptions,
     maskTextFn,
@@ -810,6 +832,7 @@ export function serializeNodeWithId(
       blockSelector,
       maskTextClass,
       maskTextSelector,
+      maskElementsOptions,
       skipChild,
       inlineStylesheet,
       maskInputOptions,
@@ -863,6 +886,7 @@ export function serializeNodeWithId(
             blockSelector,
             maskTextClass,
             maskTextSelector,
+            maskElementsOptions,
             skipChild: false,
             inlineStylesheet,
             maskInputOptions,
@@ -897,6 +921,7 @@ function snapshot(
     blockSelector?: string | null;
     maskTextClass?: string | RegExp;
     maskTextSelector?: string | null;
+    maskElementsOptions: TMaskElementsOptions
     inlineStylesheet?: boolean;
     maskAllInputs?: boolean | MaskInputOptions;
     maskTextFn?: MaskTextFn;
@@ -916,6 +941,7 @@ function snapshot(
     blockSelector = null,
     maskTextClass = 'rr-mask',
     maskTextSelector = null,
+    maskElementsOptions,
     inlineStylesheet = true,
     inlineImages = false,
     recordCanvas = false,
@@ -981,6 +1007,7 @@ function snapshot(
       blockSelector,
       maskTextClass,
       maskTextSelector,
+      maskElementsOptions: maskElementsOptions || {},
       skipChild: false,
       inlineStylesheet,
       maskInputOptions,

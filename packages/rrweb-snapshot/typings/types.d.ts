@@ -94,3 +94,9 @@ export declare type KeepIframeSrcFn = (src: string) => boolean;
 export declare type BuildCache = {
     stylesWithHoverClass: Map<string, string>;
 };
+export declare type TMaskElementsOptions = Partial<{
+    maskAllInputs: boolean;
+    maskAllImages: boolean;
+    maskAllTextNodes: boolean;
+    unmaskSelector: string;
+}>;

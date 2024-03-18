@@ -1,5 +1,6 @@
 import { JSDOM } from 'jsdom';
-import { absoluteToStylesheet, _isBlockedElement } from '../src/snapshot';
+import { _isBlockedElement, absoluteToStylesheet } from '../src/snapshot';
+import { isMaskedByGlobalRule } from '../src';
 
 describe('absolute url to stylesheet', () => {
   const href = 'http://localhost/css/style.css';
@@ -123,6 +124,34 @@ describe('isBlockedElement()', () => {
   it('blocks blocked selector', () => {
     expect(
       subject('<div data-rr-block />', { blockSelector: '[data-rr-block]' }),
+    ).toEqual(true);
+  });
+});
+
+describe('isMaskedByGlobalRule()', () => {
+  it('returns true for any text', () => {
+    expect(
+      isMaskedByGlobalRule(JSDOM.fragment('<span>Should be masked</span>'), 'span', { maskAllTextNodes: true }),
+    ).toEqual(true);
+  });
+
+  it('should not mask element with matching selector', () => {
+    const spanId = '#make-visible';
+    const dom = new JSDOM(`<span class="${spanId}">Should be masked</span>`);
+    const document = dom.window.document;
+
+    expect(
+      isMaskedByGlobalRule(
+        document.getElementById(spanId),
+        'span',
+        { maskAllTextNodes: true, unmaskSelector: spanId },
+      ),
+    ).toEqual(false);
+  });
+
+  it('returns true for any img', () => {
+    expect(
+      isMaskedByGlobalRule(JSDOM.fragment('<img src="" />'), 'img', { maskAllImages: true }),
     ).toEqual(true);
   });
 });

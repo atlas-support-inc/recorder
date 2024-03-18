@@ -6,6 +6,7 @@ import {
   SlimDOMOptions,
   MaskInputFn,
   MaskTextFn,
+  TMaskElementsOptions
 } from 'rrweb-snapshot';
 import { PackFn, UnpackFn } from './packer/base';
 import { FontFaceDescriptors } from 'css-font-loading-module';
@@ -219,10 +220,10 @@ export type recordOptions<T> = {
   ignoreClass?: string;
   maskTextClass?: maskTextClass;
   maskTextSelector?: string;
-  maskAllInputs?: boolean;
   maskInputOptions?: MaskInputOptions;
   maskInputFn?: MaskInputFn;
   maskTextFn?: MaskTextFn;
+  maskElementsOptions?: TMaskElementsOptions;
   slimDOMOptions?: SlimDOMOptions | 'all' | true;
   inlineStylesheet?: boolean;
   hooks?: hooksParam;
@@ -251,6 +252,7 @@ export type observerParam = {
   ignoreClass: string;
   maskTextClass: maskTextClass;
   maskTextSelector: string | null;
+  maskElementsOptions: TMaskElementsOptions;
   maskInputOptions: MaskInputOptions;
   maskInputFn?: MaskInputFn;
   maskTextFn?: MaskTextFn;

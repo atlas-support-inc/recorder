@@ -10,6 +10,7 @@ import {
   maskInputValue,
   MaskTextFn,
   MaskInputFn,
+  TMaskElementsOptions,
 } from 'rrweb-snapshot';
 import {
   mutationRecord,
@@ -167,6 +168,7 @@ export default class MutationBuffer {
   private blockSelector: string | null;
   private maskTextClass: maskTextClass;
   private maskTextSelector: string | null;
+  private maskElementsOptions: TMaskElementsOptions;
   private inlineStylesheet: boolean;
   private maskInputOptions: MaskInputOptions;
   private maskTextFn: MaskTextFn | undefined;
@@ -186,6 +188,7 @@ export default class MutationBuffer {
     blockSelector: string | null,
     maskTextClass: maskTextClass,
     maskTextSelector: string | null,
+    maskElementsOptions: TMaskElementsOptions,
     inlineStylesheet: boolean,
     maskInputOptions: MaskInputOptions,
     maskTextFn: MaskTextFn | undefined,
@@ -202,6 +205,7 @@ export default class MutationBuffer {
     this.blockSelector = blockSelector;
     this.maskTextClass = maskTextClass;
     this.maskTextSelector = maskTextSelector;
+    this.maskElementsOptions = maskElementsOptions;
     this.inlineStylesheet = inlineStylesheet;
     this.maskInputOptions = maskInputOptions;
     this.maskTextFn = maskTextFn;
@@ -292,6 +296,7 @@ export default class MutationBuffer {
         blockSelector: this.blockSelector,
         maskTextClass: this.maskTextClass,
         maskTextSelector: this.maskTextSelector,
+        maskElementsOptions: this.maskElementsOptions,
         skipChild: true,
         inlineStylesheet: this.inlineStylesheet,
         maskInputOptions: this.maskInputOptions,
@@ -469,6 +474,7 @@ export default class MutationBuffer {
             node: m.target,
             maskTextClass: this.maskTextClass,
             maskTextSelector: this.maskTextSelector,
+            maskElementsOptions: this.maskElementsOptions,
           });
         }
         if (isBlocked(m.target, this.blockClass) || value === m.oldValue) {

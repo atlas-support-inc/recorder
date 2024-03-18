@@ -1,11 +1,12 @@
 import { mutationCallBack, blockClass, maskTextClass, Mirror, scrollCallback, SamplingStrategy } from '../types';
-import { MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn } from 'rrweb-snapshot';
+import { MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, TMaskElementsOptions } from 'rrweb-snapshot';
 import { IframeManager } from './iframe-manager';
 declare type BypassOptions = {
     blockClass: blockClass;
     blockSelector: string | null;
     maskTextClass: maskTextClass;
     maskTextSelector: string | null;
+    maskElementsOptions: TMaskElementsOptions;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;
     maskTextFn: MaskTextFn | undefined;

@@ -1,4 +1,4 @@
-import { snapshot, MaskInputOptions, SlimDOMOptions } from 'rrweb-snapshot';
+import { snapshot, MaskInputOptions, SlimDOMOptions, TMaskElementsOptions } from 'rrweb-snapshot';
 import { initObservers, mutationBuffers } from './observer';
 import {
   on,
@@ -47,7 +47,7 @@ function record<T = eventWithTime>(
     maskTextClass = 'rr-mask',
     maskTextSelector = null,
     inlineStylesheet = true,
-    maskAllInputs,
+    maskElementsOptions = {} as TMaskElementsOptions,
     maskInputOptions: _maskInputOptions,
     slimDOMOptions: _slimDOMOptions,
     maskInputFn,
@@ -73,7 +73,7 @@ function record<T = eventWithTime>(
   }
 
   const maskInputOptions: MaskInputOptions =
-    maskAllInputs === true
+    maskElementsOptions?.maskAllInputs === true
       ? {
           color: true,
           date: true,
@@ -193,6 +193,7 @@ function record<T = eventWithTime>(
       blockSelector,
       maskTextClass,
       maskTextSelector,
+      maskElementsOptions,
       inlineStylesheet,
       maskInputOptions,
       maskTextFn,
@@ -226,6 +227,7 @@ function record<T = eventWithTime>(
       blockSelector,
       maskTextClass,
       maskTextSelector,
+      maskElementsOptions,
       inlineStylesheet,
       maskAllInputs: maskInputOptions,
       maskTextFn,
@@ -390,6 +392,7 @@ function record<T = eventWithTime>(
           ignoreClass,
           maskTextClass,
           maskTextSelector,
+          maskElementsOptions,
           maskInputOptions,
           inlineStylesheet,
           sampling,

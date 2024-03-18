@@ -1,4 +1,4 @@
-import { serializedNodeWithId, idNodeMap, INode, MaskInputOptions, SlimDOMOptions, MaskInputFn, MaskTextFn } from 'rrweb-snapshot';
+import { serializedNodeWithId, idNodeMap, INode, MaskInputOptions, SlimDOMOptions, MaskInputFn, MaskTextFn, TMaskElementsOptions } from 'rrweb-snapshot';
 import { PackFn, UnpackFn } from './packer/base';
 import { FontFaceDescriptors } from 'css-font-loading-module';
 import { IframeManager } from './record/iframe-manager';
@@ -140,10 +140,10 @@ export declare type recordOptions<T> = {
     ignoreClass?: string;
     maskTextClass?: maskTextClass;
     maskTextSelector?: string;
-    maskAllInputs?: boolean;
     maskInputOptions?: MaskInputOptions;
     maskInputFn?: MaskInputFn;
     maskTextFn?: MaskTextFn;
+    maskElementsOptions?: TMaskElementsOptions;
     slimDOMOptions?: SlimDOMOptions | 'all' | true;
     inlineStylesheet?: boolean;
     hooks?: hooksParam;
@@ -170,6 +170,7 @@ export declare type observerParam = {
     ignoreClass: string;
     maskTextClass: maskTextClass;
     maskTextSelector: string | null;
+    maskElementsOptions: TMaskElementsOptions;
     maskInputOptions: MaskInputOptions;
     maskInputFn?: MaskInputFn;
     maskTextFn?: MaskTextFn;
