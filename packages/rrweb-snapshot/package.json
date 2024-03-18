@@ -1,5 +1,5 @@
 {
-  "name": "rrweb-snapshot",
+  "name": "@atlasinc/rrweb-snapshot",
   "version": "1.1.16",
   "description": "rrweb's component to take a snapshot of DOM, aka DOM serializer",
   "scripts": {
