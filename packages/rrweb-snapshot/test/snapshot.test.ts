@@ -129,28 +129,28 @@ describe('isBlockedElement()', () => {
 });
 
 describe('isMaskedByGlobalRule()', () => {
-  it('returns true for any text', () => {
+  it('returns true for any text if maskAllByDefault', () => {
     expect(
       isMaskedByGlobalRule(JSDOM.fragment('<span>Should be masked</span>'), { maskAllByDefault: true }),
     ).toEqual(true);
   });
 
+  it('returns true for any img if maskAllByDefault', () => {
+    expect(
+      isMaskedByGlobalRule(JSDOM.fragment('<img src="" />'), { maskAllByDefault: true }),
+    ).toEqual(true);
+  });
+
   it('should not mask element with matching selector', () => {
-    const spanId = '#make-visible';
-    const dom = new JSDOM(`<span class="${spanId}">Should be masked</span>`);
+    const spanId = 'make-visible';
+    const dom = new JSDOM(`<span id="${spanId}">This text should be visible</span>`);
     const document = dom.window.document;
 
     expect(
       isMaskedByGlobalRule(
         document.getElementById(spanId),
-        { maskAllByDefault: true, exceptionSelector: spanId },
+        { maskAllByDefault: true, exceptionSelector: `#${spanId}` },
       ),
     ).toEqual(false);
-  });
-
-  it('returns true for any img', () => {
-    expect(
-      isMaskedByGlobalRule(JSDOM.fragment('<img src="" />'), { maskAllByDefault: true }),
-    ).toEqual(true);
   });
 });
