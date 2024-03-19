@@ -95,8 +95,8 @@ export declare type BuildCache = {
     stylesWithHoverClass: Map<string, string>;
 };
 export declare type TMaskElementsOptions = Partial<{
+    maskAllByDefault: boolean;
     maskAllInputs: boolean;
-    maskAllImages: boolean;
-    maskAllTextNodes: boolean;
-    unmaskSelector: string;
+    maskSelector: string;
+    exceptionSelector: string;
 }>;

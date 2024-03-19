@@ -70,9 +70,8 @@ describe('record integration tests', function (this: ISuite) {
         emit: event => {          
           window.snapshots.push(event);
         },
-        maskTextSelector: ${JSON.stringify(options.maskTextSelector)},
-        maskAllInputs: ${options.maskAllInputs},
-        maskInputOptions: ${JSON.stringify(options.maskAllInputs)},
+        maskElementsOptions: ${JSON.stringify(options.maskElementsOptions)},
+        maskInputOptions: ${JSON.stringify(options.maskElementsOptions?.maskAllInputs)},
         userTriggeredOnInput: ${options.userTriggeredOnInput},
         maskTextFn: ${options.maskTextFn},
         recordCanvas: ${options.recordCanvas},
@@ -92,9 +91,9 @@ describe('record integration tests', function (this: ISuite) {
     server = await startServer();
     browser = await launchPuppeteer();
 
-    const bundlePath = path.resolve(__dirname, '../dist/rrweb.min.js');
+    const bundlePath = path.resolve(__dirname, '../dist/rrweb.js');
     const pluginsCode = [
-      path.resolve(__dirname, '../dist/plugins/console-record.min.js'),
+      path.resolve(__dirname, '../dist/plugins/console-record.js'),
     ]
       .map((path) => fs.readFileSync(path, 'utf8'))
       .join();
@@ -235,7 +234,7 @@ describe('record integration tests', function (this: ISuite) {
     const page: puppeteer.Page = await browser.newPage();
     await page.goto('about:blank');
     await page.setContent(
-      getHtml.call(this, 'form.html', { maskAllInputs: true }),
+      getHtml.call(this, 'form.html', { maskElementsOptions: { maskAllInputs: true } }),
     );
 
     await page.type('input[type="text"]', 'test');
@@ -537,7 +536,9 @@ describe('record integration tests', function (this: ISuite) {
     await page.goto('about:blank');
     await page.setContent(
       getHtml.call(this, 'mask-text.html', {
-        maskTextSelector: '[data-masking="true"]',
+        maskElementsOptions: {
+          maskSelector: '[data-masking="true"]'
+        }
       }),
     );
 
@@ -550,7 +551,9 @@ describe('record integration tests', function (this: ISuite) {
     await page.goto('about:blank');
     await page.setContent(
       getHtml.call(this, 'mask-text.html', {
-        maskTextSelector: '[data-masking="true"]',
+        maskElementsOptions: {
+          maskSelector: '[data-masking="true"]'
+        },
         maskTextFn: (t: string) => t.replace(/[a-z]/g, '*'),
       }),
     );

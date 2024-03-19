@@ -118,8 +118,8 @@ export type BuildCache = {
 };
 
 export type TMaskElementsOptions = Partial<{
-  maskAllInputs: boolean
-  maskAllImages: boolean;
-  maskAllTextNodes: boolean;
-  unmaskSelector: string;
+  maskAllByDefault: boolean;
+  maskAllInputs: boolean;
+  maskSelector: string;
+  exceptionSelector: string;
 }>;

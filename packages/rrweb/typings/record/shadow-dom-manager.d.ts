@@ -5,7 +5,6 @@ declare type BypassOptions = {
     blockClass: blockClass;
     blockSelector: string | null;
     maskTextClass: maskTextClass;
-    maskTextSelector: string | null;
     maskElementsOptions: TMaskElementsOptions;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;

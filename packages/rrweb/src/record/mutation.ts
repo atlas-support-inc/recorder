@@ -167,7 +167,6 @@ export default class MutationBuffer {
   private blockClass: blockClass;
   private blockSelector: string | null;
   private maskTextClass: maskTextClass;
-  private maskTextSelector: string | null;
   private maskElementsOptions: TMaskElementsOptions;
   private inlineStylesheet: boolean;
   private maskInputOptions: MaskInputOptions;
@@ -187,7 +186,6 @@ export default class MutationBuffer {
     blockClass: blockClass,
     blockSelector: string | null,
     maskTextClass: maskTextClass,
-    maskTextSelector: string | null,
     maskElementsOptions: TMaskElementsOptions,
     inlineStylesheet: boolean,
     maskInputOptions: MaskInputOptions,
@@ -204,7 +202,6 @@ export default class MutationBuffer {
     this.blockClass = blockClass;
     this.blockSelector = blockSelector;
     this.maskTextClass = maskTextClass;
-    this.maskTextSelector = maskTextSelector;
     this.maskElementsOptions = maskElementsOptions;
     this.inlineStylesheet = inlineStylesheet;
     this.maskInputOptions = maskInputOptions;
@@ -295,7 +292,6 @@ export default class MutationBuffer {
         blockClass: this.blockClass,
         blockSelector: this.blockSelector,
         maskTextClass: this.maskTextClass,
-        maskTextSelector: this.maskTextSelector,
         maskElementsOptions: this.maskElementsOptions,
         skipChild: true,
         inlineStylesheet: this.inlineStylesheet,
@@ -450,7 +446,7 @@ export default class MutationBuffer {
               needMaskingText(
                 m.target,
                 this.maskTextClass,
-                this.maskTextSelector,
+                this.maskElementsOptions.maskSelector ?? null,
               ) && value
                 ? this.maskTextFn
                   ? this.maskTextFn(value)
@@ -473,7 +469,6 @@ export default class MutationBuffer {
             maskInputFn: this.maskInputFn,
             node: m.target,
             maskTextClass: this.maskTextClass,
-            maskTextSelector: this.maskTextSelector,
             maskElementsOptions: this.maskElementsOptions,
           });
         }

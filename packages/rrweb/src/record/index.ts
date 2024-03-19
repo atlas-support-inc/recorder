@@ -45,7 +45,6 @@ function record<T = eventWithTime>(
     blockSelector = null,
     ignoreClass = 'rr-ignore',
     maskTextClass = 'rr-mask',
-    maskTextSelector = null,
     inlineStylesheet = true,
     maskElementsOptions = {} as TMaskElementsOptions,
     maskInputOptions: _maskInputOptions,
@@ -73,7 +72,7 @@ function record<T = eventWithTime>(
   }
 
   const maskInputOptions: MaskInputOptions =
-    maskElementsOptions?.maskAllInputs === true
+    (maskElementsOptions?.maskAllByDefault || maskElementsOptions?.maskAllInputs)
       ? {
           color: true,
           date: true,
@@ -192,7 +191,6 @@ function record<T = eventWithTime>(
       blockClass,
       blockSelector,
       maskTextClass,
-      maskTextSelector,
       maskElementsOptions,
       inlineStylesheet,
       maskInputOptions,
@@ -226,7 +224,6 @@ function record<T = eventWithTime>(
       blockClass,
       blockSelector,
       maskTextClass,
-      maskTextSelector,
       maskElementsOptions,
       inlineStylesheet,
       maskAllInputs: maskInputOptions,
@@ -391,7 +388,6 @@ function record<T = eventWithTime>(
           blockClass,
           ignoreClass,
           maskTextClass,
-          maskTextSelector,
           maskElementsOptions,
           maskInputOptions,
           inlineStylesheet,

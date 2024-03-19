@@ -93,7 +93,6 @@ export function initMutationObserver(
   blockClass: blockClass,
   blockSelector: string | null,
   maskTextClass: maskTextClass,
-  maskTextSelector: string | null,
   maskElementsOptions: TMaskElementsOptions,
   inlineStylesheet: boolean,
   maskInputOptions: MaskInputOptions,
@@ -115,7 +114,6 @@ export function initMutationObserver(
     blockClass,
     blockSelector,
     maskTextClass,
-    maskTextSelector,
     maskElementsOptions,
     inlineStylesheet,
     maskInputOptions,
@@ -369,7 +367,6 @@ function initInputObserver(
   mirror: Mirror,
   blockClass: blockClass,
   maskTextClass: maskTextClass,
-  maskTextSelector: string | null,
   maskElementsOptions: TMaskElementsOptions,
   ignoreClass: string,
   maskInputOptions: MaskInputOptions,
@@ -407,7 +404,7 @@ function initInputObserver(
         (target as Element).tagName.toLowerCase() as keyof MaskInputOptions
       ] ||
       maskInputOptions[type as keyof MaskInputOptions] ||
-      needMaskingText(target as Node, maskTextClass, maskTextSelector)
+      needMaskingText(target as Node, maskTextClass, maskElementsOptions?.maskSelector ?? null)
     ) {
       text = maskInputValue({
         maskInputOptions,
@@ -417,7 +414,6 @@ function initInputObserver(
         maskInputFn,
         node: target as Node,
         maskTextClass,
-        maskTextSelector,
         maskElementsOptions
       });
     }
@@ -966,7 +962,6 @@ export function initObservers(
     o.blockClass,
     o.blockSelector,
     o.maskTextClass,
-    o.maskTextSelector,
     o.maskElementsOptions,
     o.inlineStylesheet,
     o.maskInputOptions,
@@ -1007,7 +1002,6 @@ export function initObservers(
     o.mirror,
     o.blockClass,
     o.maskTextClass,
-    o.maskTextSelector,
     o.maskElementsOptions,
     o.ignoreClass,
     o.maskInputOptions,

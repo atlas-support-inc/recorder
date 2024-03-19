@@ -10,7 +10,6 @@ export declare function serializeNodeWithId(n: Node | INode, options: {
     blockClass: string | RegExp;
     blockSelector: string | null;
     maskTextClass: string | RegExp;
-    maskTextSelector: string | null;
     maskElementsOptions: TMaskElementsOptions;
     skipChild: boolean;
     inlineStylesheet: boolean;
@@ -30,7 +29,6 @@ declare function snapshot(n: Document, options?: {
     blockClass?: string | RegExp;
     blockSelector?: string | null;
     maskTextClass?: string | RegExp;
-    maskTextSelector?: string | null;
     maskElementsOptions: TMaskElementsOptions;
     inlineStylesheet?: boolean;
     maskAllInputs?: boolean | MaskInputOptions;

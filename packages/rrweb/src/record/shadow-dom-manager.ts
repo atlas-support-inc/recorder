@@ -20,7 +20,6 @@ type BypassOptions = {
   blockClass: blockClass;
   blockSelector: string | null;
   maskTextClass: maskTextClass;
-  maskTextSelector: string | null;
   maskElementsOptions: TMaskElementsOptions;
   inlineStylesheet: boolean;
   maskInputOptions: MaskInputOptions;
@@ -58,7 +57,6 @@ export class ShadowDomManager {
       this.bypassOptions.blockClass,
       this.bypassOptions.blockSelector,
       this.bypassOptions.maskTextClass,
-      this.bypassOptions.maskTextSelector,
       this.bypassOptions.maskElementsOptions,
       this.bypassOptions.inlineStylesheet,
       this.bypassOptions.maskInputOptions,

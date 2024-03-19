@@ -9,16 +9,6 @@ export function isShadowRoot(n: Node): n is ShadowRoot {
   return Boolean(host && host.shadowRoot && host.shadowRoot === n);
 }
 
-function isInput(n: Node | INode, tagName: string) {
-  if (!n) {
-    return false;
-  }
-
-  return tagName === 'input' ||
-    tagName === 'textarea' ||
-    tagName === 'select';
-}
-
 export function maskInputValue({
   maskInputOptions,
   tagName,
@@ -27,7 +17,6 @@ export function maskInputValue({
   maskInputFn,
   node,
   maskTextClass,
-  maskTextSelector,
   maskElementsOptions,
 }: {
   maskInputOptions: MaskInputOptions;
@@ -37,19 +26,19 @@ export function maskInputValue({
   maskInputFn?: MaskInputFn;
   node: Node;
   maskTextClass: string | RegExp;
-  maskTextSelector: string | null;
   maskElementsOptions: TMaskElementsOptions;
 }): string {
   const tagNameLowerCase = tagName?.toLowerCase();
   let text = value || '';
-  if (maskElementsOptions.maskAllInputs && !isMaskedByGlobalRule(node, tagNameLowerCase, maskElementsOptions)) {
+  const { maskAllByDefault, maskSelector } = maskElementsOptions;
+  if (maskAllByDefault && !isMaskedByGlobalRule(node, maskElementsOptions)) {
     return text;
   }
 
   if (
     maskInputOptions[tagNameLowerCase as keyof MaskInputOptions] ||
     maskInputOptions[type as keyof MaskInputOptions] ||
-    needMaskingText(node, maskTextClass, maskTextSelector)
+    needMaskingText(node, maskTextClass, maskSelector ?? null)
   ) {
     if (maskInputFn) {
       text = maskInputFn(text);
@@ -62,7 +51,6 @@ export function maskInputValue({
 
 export function isMaskedByGlobalRule(
   node: Node | null,
-  tagName: string,
   maskElementsOptions: TMaskElementsOptions,
 ) {
   if (!node) {
@@ -70,25 +58,23 @@ export function isMaskedByGlobalRule(
   }
 
   const {
-    maskAllTextNodes,
-    maskAllInputs,
-    maskAllImages,
-    unmaskSelector,
+    maskAllByDefault,
+    maskSelector,
+    exceptionSelector,
   } = maskElementsOptions;
 
-  const isMaskingDisabledBySelector = unmaskSelector ? (node as HTMLElement).matches(unmaskSelector) : false;
+  if (maskAllByDefault) {
+    const isException = exceptionSelector ? (node as HTMLElement).matches(exceptionSelector) : false;
+    return !isException;
+  }
 
-  return (
-    (maskAllTextNodes && !isInput(node, tagName) && tagName !== 'img') ||
-      (isInput(node, tagName) && maskAllInputs) ||
-      (tagName === 'img' && maskAllImages)) &&
-    !isMaskingDisabledBySelector;
+  return maskSelector ? (node as HTMLElement).matches(maskSelector) : false;
 }
 
 export function needMaskingText(
   node: Node | null,
   maskTextClass: string | RegExp,
-  maskTextSelector: string | null,
+  maskSelector: string | null,
 ): boolean {
   if (!node) {
     return false;
@@ -105,13 +91,13 @@ export function needMaskingText(
         }
       });
     }
-    if (maskTextSelector) {
-      if ((node as HTMLElement).matches(maskTextSelector)) {
+    if (maskSelector) {
+      if ((node as HTMLElement).matches(maskSelector)) {
         return true;
       }
     }
-    return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
+    return needMaskingText(node.parentNode, maskTextClass, maskSelector);
   }
 
-  return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
+  return needMaskingText(node.parentNode, maskTextClass, maskSelector);
 }

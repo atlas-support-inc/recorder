@@ -165,6 +165,7 @@ export const sampleEvents: eventWithTime[] = [
     type: EventType.Meta,
     data: {
       href: 'http://localhost',
+      title: 'Localhost',
       width: 1000,
       height: 800,
     },
@@ -258,6 +259,7 @@ export const sampleStyleSheetRemoveEvents: eventWithTime[] = [
     type: EventType.Meta,
     data: {
       href: 'http://localhost',
+      title: 'Localhost',
       width: 1000,
       height: 800,
     },

@@ -139,7 +139,6 @@ export declare type recordOptions<T> = {
     blockSelector?: string;
     ignoreClass?: string;
     maskTextClass?: maskTextClass;
-    maskTextSelector?: string;
     maskInputOptions?: MaskInputOptions;
     maskInputFn?: MaskInputFn;
     maskTextFn?: MaskTextFn;
@@ -169,7 +168,6 @@ export declare type observerParam = {
     blockSelector: string | null;
     ignoreClass: string;
     maskTextClass: maskTextClass;
-    maskTextSelector: string | null;
     maskElementsOptions: TMaskElementsOptions;
     maskInputOptions: MaskInputOptions;
     maskInputFn?: MaskInputFn;

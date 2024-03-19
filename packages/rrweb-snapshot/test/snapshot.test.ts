@@ -131,7 +131,7 @@ describe('isBlockedElement()', () => {
 describe('isMaskedByGlobalRule()', () => {
   it('returns true for any text', () => {
     expect(
-      isMaskedByGlobalRule(JSDOM.fragment('<span>Should be masked</span>'), 'span', { maskAllTextNodes: true }),
+      isMaskedByGlobalRule(JSDOM.fragment('<span>Should be masked</span>'), { maskAllByDefault: true }),
     ).toEqual(true);
   });
 
@@ -143,15 +143,14 @@ describe('isMaskedByGlobalRule()', () => {
     expect(
       isMaskedByGlobalRule(
         document.getElementById(spanId),
-        'span',
-        { maskAllTextNodes: true, unmaskSelector: spanId },
+        { maskAllByDefault: true, exceptionSelector: spanId },
       ),
     ).toEqual(false);
   });
 
   it('returns true for any img', () => {
     expect(
-      isMaskedByGlobalRule(JSDOM.fragment('<img src="" />'), 'img', { maskAllImages: true }),
+      isMaskedByGlobalRule(JSDOM.fragment('<img src="" />'), { maskAllByDefault: true }),
     ).toEqual(true);
   });
 });
