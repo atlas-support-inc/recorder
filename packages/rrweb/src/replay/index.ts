@@ -62,7 +62,7 @@ import {
   getNestedRule,
   getPositionsAndIndex,
 } from './virtual-styles';
-import { isUserInteraction, SKIP_MIN_SPEED, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
+import { isUserInteraction, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
 
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
@@ -356,6 +356,9 @@ export class Replayer {
    * @param timeOffset number
    */
   public play(timeOffset = 0) {
+    if (this.speedService.state.matches('skipping')) {
+      this.backToNormal();
+    }
     if (this.service.state.matches('paused')) {
       this.service.send({ type: 'PLAY', payload: { timeOffset } });
     } else {
@@ -556,10 +559,8 @@ export class Replayer {
             this.nextUserInteractionEvent.timestamp - event.timestamp;
 
           const payload = {
-            speed: Math.max(
-              Math.round(skipTime / SKIP_TIME_INTERVAL),
-              SKIP_MIN_SPEED
-            )
+            // inactive period play time max 3 secs
+            speed: Math.round(skipTime / SKIP_TIME_INTERVAL)
           };
           this.speedService.send({ type: 'FAST_FORWARD', payload });
           this.emitter.emit(ReplayerEvents.SkipStart, payload);
@@ -567,7 +568,6 @@ export class Replayer {
       }
     }
   }
-
 
   private getCastFn(event: eventWithTime, isSync = false) {
     let castFn: undefined | (() => void);

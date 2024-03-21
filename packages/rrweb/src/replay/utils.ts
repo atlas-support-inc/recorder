@@ -1,8 +1,7 @@
 import { EventType, eventWithTime, IncrementalSource, TInactivityRange } from '../types';
 
 export const SKIP_TIME_THRESHOLD = 10 * 1000;
-export const SKIP_TIME_INTERVAL = 5 * 1000;
-export const SKIP_MIN_SPEED = 16;
+export const SKIP_TIME_INTERVAL = 3 * 1000;
 
 function msToTime(ms: number) {
   const from = ms < 3600000 ? 14 : 11;
@@ -49,7 +48,7 @@ export function getInactivityRanges(
       const rangeStartTime = msToTime(startMs);
       const rangeEndTime = msToTime(endMs);
 
-      const rangeExists = ranges.some((range) => range.startTime === rangeStartTime && range.endTime === rangeEndTime);
+      const rangeExists = ranges.some((range) => rangeStartTime >= range.startTime && rangeEndTime <= range.endTime);
 
       if (!rangeExists) {
         ranges.push({

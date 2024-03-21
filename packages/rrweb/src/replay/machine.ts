@@ -189,14 +189,8 @@ export function createPlayerService(
           const syncEvents = new Array<eventWithTime>();
           const actions = new Array<actionWithDelay>();
           for (const event of neededEvents) {
-            if (
-              lastPlayedTimestamp &&
-              lastPlayedTimestamp < baselineTime &&
-              (event.timestamp <= lastPlayedTimestamp ||
-                event === lastPlayedEvent)
-            ) {
-              continue;
-            }
+            /* process all sync events,
+              otherwise skipping won't work when user is calling "play" with offset */
             if (event.timestamp < baselineTime) {
               syncEvents.push(event);
             } else {
