@@ -1,6 +1,5 @@
 import { JSDOM } from 'jsdom';
 import { _isBlockedElement, absoluteToStylesheet } from '../src/snapshot';
-import { isMaskedByGlobalRule } from '../src';
 
 describe('absolute url to stylesheet', () => {
   const href = 'http://localhost/css/style.css';
@@ -125,32 +124,5 @@ describe('isBlockedElement()', () => {
     expect(
       subject('<div data-rr-block />', { blockSelector: '[data-rr-block]' }),
     ).toEqual(true);
-  });
-});
-
-describe('isMaskedByGlobalRule()', () => {
-  it('returns true for any text if maskAllByDefault', () => {
-    expect(
-      isMaskedByGlobalRule(JSDOM.fragment('<span>Should be masked</span>'), { maskAllByDefault: true }),
-    ).toEqual(true);
-  });
-
-  it('returns true for any img if maskAllByDefault', () => {
-    expect(
-      isMaskedByGlobalRule(JSDOM.fragment('<img src="" />'), { maskAllByDefault: true }),
-    ).toEqual(true);
-  });
-
-  it('should not mask element with matching selector', () => {
-    const spanId = 'make-visible';
-    const dom = new JSDOM(`<span id="${spanId}">This text should be visible</span>`);
-    const document = dom.window.document;
-
-    expect(
-      isMaskedByGlobalRule(
-        document.getElementById(spanId),
-        { maskAllByDefault: true, exceptionSelector: `#${spanId}` },
-      ),
-    ).toEqual(false);
   });
 });

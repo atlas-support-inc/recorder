@@ -70,8 +70,9 @@ describe('record integration tests', function (this: ISuite) {
         emit: event => {          
           window.snapshots.push(event);
         },
-        maskElementsOptions: ${JSON.stringify(options.maskElementsOptions)},
-        maskInputOptions: ${JSON.stringify(options.maskElementsOptions?.maskAllInputs)},
+        maskTextSelector: ${JSON.stringify(options.maskTextSelector)},
+        maskAllInputs: ${options.maskAllInputs},
+        maskInputOptions: ${JSON.stringify(options.maskAllInputs)},
         userTriggeredOnInput: ${options.userTriggeredOnInput},
         maskTextFn: ${options.maskTextFn},
         recordCanvas: ${options.recordCanvas},
@@ -234,7 +235,7 @@ describe('record integration tests', function (this: ISuite) {
     const page: puppeteer.Page = await browser.newPage();
     await page.goto('about:blank');
     await page.setContent(
-      getHtml.call(this, 'form.html', { maskElementsOptions: { maskAllInputs: true } }),
+      getHtml.call(this, 'form.html', { maskAllInputs: true }),
     );
 
     await page.type('input[type="text"]', 'test');
@@ -536,9 +537,7 @@ describe('record integration tests', function (this: ISuite) {
     await page.goto('about:blank');
     await page.setContent(
       getHtml.call(this, 'mask-text.html', {
-        maskElementsOptions: {
-          maskSelector: '[data-masking="true"]'
-        }
+        maskTextSelector: '[data-masking="true"]',
       }),
     );
 
@@ -551,9 +550,7 @@ describe('record integration tests', function (this: ISuite) {
     await page.goto('about:blank');
     await page.setContent(
       getHtml.call(this, 'mask-text.html', {
-        maskElementsOptions: {
-          maskSelector: '[data-masking="true"]'
-        },
+        maskTextSelector: '[data-masking="true"]',
         maskTextFn: (t: string) => t.replace(/[a-z]/g, '*'),
       }),
     );

@@ -1,4 +1,4 @@
-import { serializedNodeWithId, idNodeMap, INode, MaskInputOptions, SlimDOMOptions, MaskInputFn, MaskTextFn, TMaskElementsOptions } from 'rrweb-snapshot';
+import { serializedNodeWithId, idNodeMap, INode, MaskInputOptions, SlimDOMOptions, MaskInputFn, MaskTextFn, MaskImageFn } from 'rrweb-snapshot';
 import { PackFn, UnpackFn } from './packer/base';
 import { FontFaceDescriptors } from 'css-font-loading-module';
 import { IframeManager } from './record/iframe-manager';
@@ -139,10 +139,13 @@ export declare type recordOptions<T> = {
     blockSelector?: string;
     ignoreClass?: string;
     maskTextClass?: maskTextClass;
+    maskTextSelector?: string;
+    maskAll?: boolean;
+    maskAllInputs?: boolean;
     maskInputOptions?: MaskInputOptions;
     maskInputFn?: MaskInputFn;
     maskTextFn?: MaskTextFn;
-    maskElementsOptions?: TMaskElementsOptions;
+    maskImageFn?: MaskImageFn;
     slimDOMOptions?: SlimDOMOptions | 'all' | true;
     inlineStylesheet?: boolean;
     hooks?: hooksParam;
@@ -168,10 +171,12 @@ export declare type observerParam = {
     blockSelector: string | null;
     ignoreClass: string;
     maskTextClass: maskTextClass;
-    maskElementsOptions: TMaskElementsOptions;
+    maskTextSelector: string | null;
+    maskAll?: boolean;
     maskInputOptions: MaskInputOptions;
     maskInputFn?: MaskInputFn;
     maskTextFn?: MaskTextFn;
+    maskImageFn?: MaskImageFn;
     inlineStylesheet: boolean;
     styleSheetRuleCb: styleSheetRuleCallback;
     styleDeclarationCb: styleDeclarationCallback;

@@ -90,13 +90,8 @@ export declare type SlimDOMOptions = Partial<{
 }>;
 export declare type MaskTextFn = (text: string) => string;
 export declare type MaskInputFn = (text: string) => string;
+export declare type MaskImageFn = (n: HTMLImageElement, attributes: attributes) => attributes;
 export declare type KeepIframeSrcFn = (src: string) => boolean;
 export declare type BuildCache = {
     stylesWithHoverClass: Map<string, string>;
 };
-export declare type TMaskElementsOptions = Partial<{
-    maskAllByDefault: boolean;
-    maskAllInputs: boolean;
-    maskSelector: string;
-    exceptionSelector: string;
-}>;

@@ -1,4 +1,10 @@
-import { INode, MaskInputFn, MaskInputOptions, TMaskElementsOptions } from './types';
+import {
+  attributes,
+  INode,
+  MaskImageFn,
+  MaskInputFn,
+  MaskInputOptions,
+} from './types';
 
 export function isElement(n: Node | INode): n is Element {
   return n.nodeType === n.ELEMENT_NODE;
@@ -17,7 +23,8 @@ export function maskInputValue({
   maskInputFn,
   node,
   maskTextClass,
-  maskElementsOptions,
+  maskTextSelector,
+  maskAll,
 }: {
   maskInputOptions: MaskInputOptions;
   tagName: string;
@@ -26,19 +33,15 @@ export function maskInputValue({
   maskInputFn?: MaskInputFn;
   node: Node;
   maskTextClass: string | RegExp;
-  maskElementsOptions: TMaskElementsOptions;
+  maskTextSelector: string | null;
+  maskAll?: boolean;
 }): string {
-  const tagNameLowerCase = tagName?.toLowerCase();
   let text = value || '';
-  const { maskAllByDefault, maskSelector } = maskElementsOptions;
-  if (maskAllByDefault && !isMaskedByGlobalRule(node, maskElementsOptions)) {
-    return text;
-  }
 
   if (
-    maskInputOptions[tagNameLowerCase as keyof MaskInputOptions] ||
+    maskInputOptions[tagName.toLowerCase() as keyof MaskInputOptions] ||
     maskInputOptions[type as keyof MaskInputOptions] ||
-    needMaskingText(node, maskTextClass, maskSelector ?? null)
+    needMaskingText(node, maskTextClass, maskTextSelector, maskAll)
   ) {
     if (maskInputFn) {
       text = maskInputFn(text);
@@ -49,32 +52,11 @@ export function maskInputValue({
   return text;
 }
 
-export function isMaskedByGlobalRule(
-  node: Node | null,
-  maskElementsOptions: TMaskElementsOptions,
-) {
-  if (!node) {
-    return false;
-  }
-
-  const {
-    maskAllByDefault,
-    maskSelector,
-    exceptionSelector,
-  } = maskElementsOptions;
-
-  if (maskAllByDefault) {
-    const isException = exceptionSelector ? (node as HTMLElement).matches(exceptionSelector) : false;
-    return !isException;
-  }
-
-  return maskSelector ? (node as HTMLElement).matches(maskSelector) : false;
-}
-
 export function needMaskingText(
   node: Node | null,
   maskTextClass: string | RegExp,
-  maskSelector: string | null,
+  maskTextSelector: string | null,
+  maskAll?: boolean,
 ): boolean {
   if (!node) {
     return false;
@@ -91,13 +73,55 @@ export function needMaskingText(
         }
       });
     }
-    if (maskSelector) {
-      if ((node as HTMLElement).matches(maskSelector)) {
+    if (maskTextSelector) {
+      if ((node as HTMLElement).matches(maskTextSelector)) {
         return true;
       }
+
+      if (maskAll) {
+        // stop recursive calls if "maskAll"
+        return false;
+      }
     }
-    return needMaskingText(node.parentNode, maskTextClass, maskSelector);
+
+    return needMaskingText(
+      node.parentNode,
+      maskTextClass,
+      maskTextSelector,
+      maskAll,
+    );
   }
 
-  return needMaskingText(node.parentNode, maskTextClass, maskSelector);
+  return needMaskingText(
+    node.parentNode,
+    maskTextClass,
+    maskTextSelector,
+    maskAll,
+  );
+}
+
+export function maskImage({
+  n,
+  attributes,
+  maskImageFn,
+}: {
+  n: HTMLImageElement;
+  attributes: attributes;
+  maskImageFn?: MaskImageFn;
+}) {
+  const alt =
+    typeof attributes.alt === 'string' && attributes.alt.length > 0
+      ? '*'.repeat(attributes.alt.length)
+      : '';
+
+  if (maskImageFn) {
+    const attrs = maskImageFn(n, attributes);
+    return 'alt' in attrs ? attrs : { ...attrs, alt };
+  }
+
+  return {
+    srcset: '',
+    src: '',
+    alt,
+  };
 }

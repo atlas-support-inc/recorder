@@ -1,4 +1,4 @@
-import { snapshot, MaskInputOptions, SlimDOMOptions, TMaskElementsOptions } from 'rrweb-snapshot';
+import { snapshot, MaskInputOptions, SlimDOMOptions } from 'rrweb-snapshot';
 import { initObservers, mutationBuffers } from './observer';
 import {
   on,
@@ -45,12 +45,15 @@ function record<T = eventWithTime>(
     blockSelector = null,
     ignoreClass = 'rr-ignore',
     maskTextClass = 'rr-mask',
+    maskTextSelector = null,
+    maskAll = false,
     inlineStylesheet = true,
-    maskElementsOptions = {} as TMaskElementsOptions,
+    maskAllInputs,
     maskInputOptions: _maskInputOptions,
     slimDOMOptions: _slimDOMOptions,
     maskInputFn,
     maskTextFn,
+    maskImageFn,
     hooks,
     packFn,
     sampling = {},
@@ -72,7 +75,7 @@ function record<T = eventWithTime>(
   }
 
   const maskInputOptions: MaskInputOptions =
-    (maskElementsOptions?.maskAllByDefault || maskElementsOptions?.maskAllInputs)
+    maskAllInputs === true
       ? {
           color: true,
           date: true,
@@ -191,11 +194,13 @@ function record<T = eventWithTime>(
       blockClass,
       blockSelector,
       maskTextClass,
-      maskElementsOptions,
+      maskTextSelector,
+      maskAll,
       inlineStylesheet,
       maskInputOptions,
       maskTextFn,
       maskInputFn,
+      maskImageFn,
       recordCanvas,
       inlineImages,
       sampling,
@@ -224,10 +229,12 @@ function record<T = eventWithTime>(
       blockClass,
       blockSelector,
       maskTextClass,
-      maskElementsOptions,
+      maskTextSelector,
+      maskAll,
       inlineStylesheet,
       maskAllInputs: maskInputOptions,
       maskTextFn,
+      maskImageFn,
       slimDOM: slimDOMOptions,
       recordCanvas,
       inlineImages,
@@ -388,7 +395,8 @@ function record<T = eventWithTime>(
           blockClass,
           ignoreClass,
           maskTextClass,
-          maskElementsOptions,
+          maskTextSelector,
+          maskAll,
           maskInputOptions,
           inlineStylesheet,
           sampling,

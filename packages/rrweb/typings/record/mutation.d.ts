@@ -1,4 +1,4 @@
-import { MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, TMaskElementsOptions } from 'rrweb-snapshot';
+import { MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, MaskImageFn } from 'rrweb-snapshot';
 import { mutationRecord, blockClass, maskTextClass, mutationCallBack, Mirror } from '../types';
 import { IframeManager } from './iframe-manager';
 import { ShadowDomManager } from './shadow-dom-manager';
@@ -17,11 +17,13 @@ export default class MutationBuffer {
     private blockClass;
     private blockSelector;
     private maskTextClass;
-    private maskElementsOptions;
+    private maskTextSelector;
+    private maskAll?;
     private inlineStylesheet;
     private maskInputOptions;
     private maskTextFn;
     private maskInputFn;
+    private maskImageFn?;
     private recordCanvas;
     private inlineImages;
     private slimDOMOptions;
@@ -29,7 +31,7 @@ export default class MutationBuffer {
     private mirror;
     private iframeManager;
     private shadowDomManager;
-    init(cb: mutationCallBack, blockClass: blockClass, blockSelector: string | null, maskTextClass: maskTextClass, maskElementsOptions: TMaskElementsOptions, inlineStylesheet: boolean, maskInputOptions: MaskInputOptions, maskTextFn: MaskTextFn | undefined, maskInputFn: MaskInputFn | undefined, recordCanvas: boolean, inlineImages: boolean, slimDOMOptions: SlimDOMOptions, doc: Document, mirror: Mirror, iframeManager: IframeManager, shadowDomManager: ShadowDomManager): void;
+    init(cb: mutationCallBack, blockClass: blockClass, blockSelector: string | null, maskTextClass: maskTextClass, maskTextSelector: string | null, maskAll: boolean | undefined, inlineStylesheet: boolean, maskInputOptions: MaskInputOptions, maskTextFn: MaskTextFn | undefined, maskInputFn: MaskInputFn | undefined, maskImageFn: MaskImageFn | undefined, recordCanvas: boolean, inlineImages: boolean, slimDOMOptions: SlimDOMOptions, doc: Document, mirror: Mirror, iframeManager: IframeManager, shadowDomManager: ShadowDomManager): void;
     freeze(): void;
     unfreeze(): void;
     isFrozen(): boolean;

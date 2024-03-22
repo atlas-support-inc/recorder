@@ -1,7 +1,7 @@
-import { INode, MaskInputFn, MaskInputOptions, TMaskElementsOptions } from './types';
+import { attributes, INode, MaskImageFn, MaskInputFn, MaskInputOptions } from './types';
 export declare function isElement(n: Node | INode): n is Element;
 export declare function isShadowRoot(n: Node): n is ShadowRoot;
-export declare function maskInputValue({ maskInputOptions, tagName, type, value, maskInputFn, node, maskTextClass, maskElementsOptions, }: {
+export declare function maskInputValue({ maskInputOptions, tagName, type, value, maskInputFn, node, maskTextClass, maskTextSelector, maskAll, }: {
     maskInputOptions: MaskInputOptions;
     tagName: string;
     type: string | number | boolean | null;
@@ -9,7 +9,12 @@ export declare function maskInputValue({ maskInputOptions, tagName, type, value,
     maskInputFn?: MaskInputFn;
     node: Node;
     maskTextClass: string | RegExp;
-    maskElementsOptions: TMaskElementsOptions;
+    maskTextSelector: string | null;
+    maskAll?: boolean;
 }): string;
-export declare function isMaskedByGlobalRule(node: Node | null, maskElementsOptions: TMaskElementsOptions): boolean;
-export declare function needMaskingText(node: Node | null, maskTextClass: string | RegExp, maskSelector: string | null): boolean;
+export declare function needMaskingText(node: Node | null, maskTextClass: string | RegExp, maskTextSelector: string | null, maskAll?: boolean): boolean;
+export declare function maskImage({ n, attributes, maskImageFn, }: {
+    n: HTMLImageElement;
+    attributes: attributes;
+    maskImageFn?: MaskImageFn;
+}): attributes;

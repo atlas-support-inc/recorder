@@ -6,7 +6,7 @@ import {
   needMaskingText,
   MaskInputFn,
   MaskTextFn,
-  TMaskElementsOptions,
+  MaskImageFn,
 } from 'rrweb-snapshot';
 import { FontFaceDescriptors, FontFaceSet } from 'css-font-loading-module';
 import {
@@ -93,11 +93,13 @@ export function initMutationObserver(
   blockClass: blockClass,
   blockSelector: string | null,
   maskTextClass: maskTextClass,
-  maskElementsOptions: TMaskElementsOptions,
+  maskTextSelector: string | null,
+  maskAll: boolean | undefined,
   inlineStylesheet: boolean,
   maskInputOptions: MaskInputOptions,
   maskTextFn: MaskTextFn | undefined,
   maskInputFn: MaskInputFn | undefined,
+  maskImageFn: MaskImageFn | undefined,
   recordCanvas: boolean,
   inlineImages: boolean,
   slimDOMOptions: SlimDOMOptions,
@@ -114,11 +116,13 @@ export function initMutationObserver(
     blockClass,
     blockSelector,
     maskTextClass,
-    maskElementsOptions,
+    maskTextSelector,
+    maskAll,
     inlineStylesheet,
     maskInputOptions,
     maskTextFn,
     maskInputFn,
+    maskImageFn,
     recordCanvas,
     inlineImages,
     slimDOMOptions,
@@ -367,10 +371,12 @@ function initInputObserver(
   mirror: Mirror,
   blockClass: blockClass,
   maskTextClass: maskTextClass,
-  maskElementsOptions: TMaskElementsOptions,
+  maskTextSelector: string | null,
+  maskAll: boolean | undefined,
   ignoreClass: string,
   maskInputOptions: MaskInputOptions,
   maskInputFn: MaskInputFn | undefined,
+  maskImageFn: MaskImageFn | undefined,
   sampling: SamplingStrategy,
   userTriggeredOnInput: boolean,
 ): listenerHandler {
@@ -404,7 +410,7 @@ function initInputObserver(
         (target as Element).tagName.toLowerCase() as keyof MaskInputOptions
       ] ||
       maskInputOptions[type as keyof MaskInputOptions] ||
-      needMaskingText(target as Node, maskTextClass, maskElementsOptions?.maskSelector ?? null)
+      needMaskingText(target as Node, maskTextClass, maskTextSelector, maskAll)
     ) {
       text = maskInputValue({
         maskInputOptions,
@@ -414,7 +420,8 @@ function initInputObserver(
         maskInputFn,
         node: target as Node,
         maskTextClass,
-        maskElementsOptions
+        maskTextSelector,
+        maskAll
       });
     }
     cbWithDedup(
@@ -962,11 +969,13 @@ export function initObservers(
     o.blockClass,
     o.blockSelector,
     o.maskTextClass,
-    o.maskElementsOptions,
+    o.maskTextSelector,
+    o.maskAll,
     o.inlineStylesheet,
     o.maskInputOptions,
     o.maskTextFn,
     o.maskInputFn,
+    o.maskImageFn,
     o.recordCanvas,
     o.inlineImages,
     o.slimDOMOptions,
@@ -1002,10 +1011,12 @@ export function initObservers(
     o.mirror,
     o.blockClass,
     o.maskTextClass,
-    o.maskElementsOptions,
+    o.maskTextSelector,
+    o.maskAll,
     o.ignoreClass,
     o.maskInputOptions,
     o.maskInputFn,
+    o.maskImageFn,
     o.sampling,
     o.userTriggeredOnInput,
   );
