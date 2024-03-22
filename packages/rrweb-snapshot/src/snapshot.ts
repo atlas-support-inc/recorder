@@ -449,6 +449,21 @@ function serializeNode(
         tagName === 'select'
       ) {
         const value = (n as HTMLInputElement | HTMLTextAreaElement).value;
+
+        if (typeof attributes.placeholder === 'string' && attributes.placeholder.length > 0) {
+          attributes.placeholder = maskInputValue({
+            type: attributes.type,
+            tagName,
+            value: attributes.placeholder,
+            maskInputOptions,
+            maskInputFn,
+            node: n,
+            maskTextClass,
+            maskTextSelector,
+            maskAll,
+          });
+        }
+
         if (
           attributes.type !== 'radio' &&
           attributes.type !== 'checkbox' &&
@@ -456,7 +471,6 @@ function serializeNode(
           attributes.type !== 'button' &&
           value
         ) {
-          console.log('INPUT attributes =>', attributes);
           attributes.value = maskInputValue({
             type: attributes.type,
             tagName,

@@ -9,7 +9,8 @@ import {
   needMaskingText,
   maskInputValue,
   MaskTextFn,
-  MaskInputFn, MaskImageFn,
+  MaskInputFn,
+  MaskImageFn,
 } from 'rrweb-snapshot';
 import {
   mutationRecord,
@@ -454,7 +455,7 @@ export default class MutationBuffer {
                 m.target,
                 this.maskTextClass,
                 this.maskTextSelector,
-                this.maskAll
+                this.maskAll,
               ) && value
                 ? this.maskTextFn
                   ? this.maskTextFn(value)
