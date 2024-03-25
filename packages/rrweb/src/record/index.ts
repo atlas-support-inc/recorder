@@ -407,6 +407,7 @@ function record<T = eventWithTime>(
           doc,
           maskInputFn,
           maskTextFn,
+          maskImageFn,
           blockSelector,
           slimDOMOptions,
           mirror,

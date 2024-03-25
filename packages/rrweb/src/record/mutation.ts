@@ -8,6 +8,7 @@ import {
   isShadowRoot,
   needMaskingText,
   maskInputValue,
+  maskImage,
   MaskTextFn,
   MaskInputFn,
   MaskImageFn,
@@ -469,6 +470,8 @@ export default class MutationBuffer {
       case 'attributes': {
         const target = m.target as HTMLElement;
         let value = (m.target as HTMLElement).getAttribute(m.attributeName!);
+        const tagName = target.tagName.toLowerCase().trim();
+
         if (m.attributeName === 'value') {
           value = maskInputValue({
             maskInputOptions: this.maskInputOptions,
@@ -535,6 +538,18 @@ export default class MutationBuffer {
             m.attributeName!,
             value!,
           );
+        }
+
+        if (tagName === 'img') {
+          const attrs = maskImage({
+            n: target as HTMLImageElement,
+            attributes: item.attributes as { [p: string]: string },
+            maskImageFn: this.maskImageFn,
+          });
+
+          for (const [attr, val] of Object.entries(attrs)) {
+            item.attributes[attr] = val as string;
+          }
         }
         break;
       }
