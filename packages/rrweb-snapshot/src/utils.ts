@@ -79,8 +79,18 @@ export function needMaskingText(
       }
 
       if (maskAll) {
-        // stop recursive calls if "maskAll"
-        return false;
+        if (!maskTextClass) {
+          return false;
+        }
+
+        // When maskAll is true, maskTextSelector contains selectors which are excluded
+        const closestNodeToMaskOrExclude = (node as HTMLElement)?.closest(
+          `.${maskTextClass}, ${maskTextSelector} > *`,
+        );
+
+        return !!closestNodeToMaskOrExclude?.classList.contains(
+          maskTextClass as string,
+        );
       }
     }
 
