@@ -358,7 +358,7 @@ function wrapEventWithUserTriggeredFlag(
   return value;
 }
 
-export const INPUT_TAGS = ['INPUT', 'TEXTAREA', 'SELECT'];
+export const INPUT_TAGS = ['INPUT', 'TEXTAREA', 'SELECT', 'DIV'];
 const lastInputValueMap: WeakMap<EventTarget, inputValue> = new WeakMap();
 function initInputObserver(
   cb: inputCallback,
@@ -376,6 +376,10 @@ function initInputObserver(
   function eventHandler(event: Event) {
     let target = getEventTarget(event);
     const userTriggered = event.isTrusted;
+    const isDivElement = (target as HTMLDivElement).tagName === 'DIV';
+    const isContentEditableDiv =
+      isDivElement && (target as HTMLDivElement).isContentEditable;
+
     /**
      * If a site changes the value 'selected' of an option element, the value of its parent element, usually a select element, will be changed as well.
      * We can treat this change as a value change of the select element the current target belongs to.
@@ -386,7 +390,8 @@ function initInputObserver(
       !target ||
       !(target as Element).tagName ||
       INPUT_TAGS.indexOf((target as Element).tagName) < 0 ||
-      isBlocked(target as Node, blockClass)
+      isBlocked(target as Node, blockClass) ||
+      (isDivElement && !isContentEditableDiv)
     ) {
       return;
     }
@@ -394,7 +399,9 @@ function initInputObserver(
     if ((target as HTMLElement).classList.contains(ignoreClass)) {
       return;
     }
-    let text = (target as HTMLInputElement).value;
+    let text = isContentEditableDiv
+      ? (target as HTMLInputElement).innerText || ''
+      : (target as HTMLInputElement).value;
     let isChecked = false;
     if (type === 'radio' || type === 'checkbox') {
       isChecked = (target as HTMLInputElement).checked;
@@ -462,9 +469,23 @@ function initInputObserver(
     }
   }
   const events = sampling.input === 'last' ? ['change'] : ['input', 'change'];
+
+  let timerId: ReturnType<typeof setTimeout>;
+
+  const wrappedEventHandler = (e: Event) => {
+    if (sampling.input !== 'debounce') {
+      return eventHandler(e);
+    }
+
+    clearTimeout(timerId);
+    timerId = setTimeout(() => {
+      eventHandler(e);
+    }, 500);
+  };
+
   const handlers: Array<
     listenerHandler | hookResetter
-  > = events.map((eventName) => on(eventName, eventHandler, doc));
+  > = events.map((eventName) => on(eventName, wrappedEventHandler, doc));
   const propertyDescriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
     'value',
@@ -484,7 +505,7 @@ function initInputObserver(
         hookSetter<HTMLElement>(p[0], p[1], {
           set() {
             // mock to a normal event
-            eventHandler({ target: this } as Event);
+            wrappedEventHandler({ target: this } as Event);
           },
         }),
       ),
