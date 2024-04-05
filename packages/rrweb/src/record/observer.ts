@@ -400,7 +400,7 @@ function initInputObserver(
       return;
     }
     let text = isContentEditableDiv
-      ? (target as HTMLInputElement).innerText || ''
+      ? (target as HTMLDivElement).innerText || ''
       : (target as HTMLInputElement).value;
     let isChecked = false;
     if (type === 'radio' || type === 'checkbox') {
@@ -469,7 +469,6 @@ function initInputObserver(
     }
   }
   const events = sampling.input === 'last' ? ['change'] : ['input', 'change'];
-
   const handlers: Array<
     listenerHandler | hookResetter
   > = events.map((eventName) => on(eventName, eventHandler, doc));
