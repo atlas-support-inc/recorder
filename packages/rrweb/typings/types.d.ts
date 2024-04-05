@@ -124,7 +124,7 @@ export declare type SamplingStrategy = Partial<{
     mouseInteraction: boolean | Record<string, boolean | undefined>;
     scroll: number;
     media: number;
-    input: 'all' | 'last' | 'debounce';
+    input: 'all' | 'last';
 }>;
 export declare type RecordPlugin<TOptions = unknown> = {
     name: string;

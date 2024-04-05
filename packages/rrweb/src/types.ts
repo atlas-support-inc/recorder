@@ -200,9 +200,8 @@ export type SamplingStrategy = Partial<{
   /**
    * 'all' will record all the input events
    * 'last' will only record the last input value while input a sequence of chars
-   * 'debounce' will fire input events with delay
    */
-  input: 'all' | 'last' | 'debounce';
+  input: 'all' | 'last';
 }>;
 
 export type RecordPlugin<TOptions = unknown> = {
