@@ -16,6 +16,7 @@ const events: eventWithTime[] = [
     type: EventType.Meta,
     data: {
       href: 'http://localhost',
+      title: 'Localhost',
       width: 1000,
       height: 800,
     },

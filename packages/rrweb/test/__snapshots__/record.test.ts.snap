@@ -6,6 +6,7 @@ exports[`record can add custom event 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -100,6 +101,7 @@ exports[`record captures nested stylesheet rules 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -249,6 +251,7 @@ exports[`record captures style property changes 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -378,6 +381,7 @@ exports[`record captures stylesheet rules 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -516,6 +520,7 @@ exports[`record iframes captures stylesheet mutations in iframes 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -751,6 +756,7 @@ exports[`record is safe to checkout during async callbacks 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -882,6 +888,7 @@ exports[`record is safe to checkout during async callbacks 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -1007,6 +1014,7 @@ exports[`record without CSSGroupingRule support captures nested stylesheet rules
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }

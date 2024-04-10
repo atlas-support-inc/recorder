@@ -8,8 +8,10 @@ import {
   isShadowRoot,
   needMaskingText,
   maskInputValue,
+  maskImage,
   MaskTextFn,
   MaskInputFn,
+  MaskImageFn,
 } from 'rrweb-snapshot';
 import {
   mutationRecord,
@@ -167,10 +169,12 @@ export default class MutationBuffer {
   private blockSelector: string | null;
   private maskTextClass: maskTextClass;
   private maskTextSelector: string | null;
+  private maskAll?: boolean;
   private inlineStylesheet: boolean;
   private maskInputOptions: MaskInputOptions;
   private maskTextFn: MaskTextFn | undefined;
   private maskInputFn: MaskInputFn | undefined;
+  private maskImageFn?: MaskImageFn;
   private recordCanvas: boolean;
   private inlineImages: boolean;
   private slimDOMOptions: SlimDOMOptions;
@@ -186,10 +190,12 @@ export default class MutationBuffer {
     blockSelector: string | null,
     maskTextClass: maskTextClass,
     maskTextSelector: string | null,
+    maskAll: boolean | undefined,
     inlineStylesheet: boolean,
     maskInputOptions: MaskInputOptions,
     maskTextFn: MaskTextFn | undefined,
     maskInputFn: MaskInputFn | undefined,
+    maskImageFn: MaskImageFn | undefined,
     recordCanvas: boolean,
     inlineImages: boolean,
     slimDOMOptions: SlimDOMOptions,
@@ -202,10 +208,12 @@ export default class MutationBuffer {
     this.blockSelector = blockSelector;
     this.maskTextClass = maskTextClass;
     this.maskTextSelector = maskTextSelector;
+    this.maskAll = maskAll;
     this.inlineStylesheet = inlineStylesheet;
     this.maskInputOptions = maskInputOptions;
     this.maskTextFn = maskTextFn;
     this.maskInputFn = maskInputFn;
+    this.maskImageFn = maskImageFn;
     this.recordCanvas = recordCanvas;
     this.inlineImages = inlineImages;
     this.slimDOMOptions = slimDOMOptions;
@@ -292,11 +300,13 @@ export default class MutationBuffer {
         blockSelector: this.blockSelector,
         maskTextClass: this.maskTextClass,
         maskTextSelector: this.maskTextSelector,
+        maskAll: this.maskAll,
         skipChild: true,
         inlineStylesheet: this.inlineStylesheet,
         maskInputOptions: this.maskInputOptions,
         maskTextFn: this.maskTextFn,
         maskInputFn: this.maskInputFn,
+        maskImageFn: this.maskImageFn,
         slimDOMOptions: this.slimDOMOptions,
         recordCanvas: this.recordCanvas,
         inlineImages: this.inlineImages,
@@ -446,6 +456,7 @@ export default class MutationBuffer {
                 m.target,
                 this.maskTextClass,
                 this.maskTextSelector,
+                this.maskAll,
               ) && value
                 ? this.maskTextFn
                   ? this.maskTextFn(value)
@@ -459,6 +470,8 @@ export default class MutationBuffer {
       case 'attributes': {
         const target = m.target as HTMLElement;
         let value = (m.target as HTMLElement).getAttribute(m.attributeName!);
+        const tagName = target.tagName.toLowerCase().trim();
+
         if (m.attributeName === 'value') {
           value = maskInputValue({
             maskInputOptions: this.maskInputOptions,
@@ -469,6 +482,7 @@ export default class MutationBuffer {
             node: m.target,
             maskTextClass: this.maskTextClass,
             maskTextSelector: this.maskTextSelector,
+            maskAll: this.maskAll,
           });
         }
         if (isBlocked(m.target, this.blockClass) || value === m.oldValue) {
@@ -524,6 +538,18 @@ export default class MutationBuffer {
             m.attributeName!,
             value!,
           );
+        }
+
+        if (tagName === 'img') {
+          const attrs = maskImage({
+            n: target as HTMLImageElement,
+            attributes: item.attributes as { [p: string]: string },
+            maskImageFn: this.maskImageFn,
+          });
+
+          for (const [attr, val] of Object.entries(attrs)) {
+            item.attributes[attr] = val as string;
+          }
         }
         break;
       }

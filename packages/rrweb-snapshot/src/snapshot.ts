@@ -10,8 +10,15 @@ import {
   MaskTextFn,
   MaskInputFn,
   KeepIframeSrcFn,
+  MaskImageFn,
 } from './types';
-import { isElement, isShadowRoot, maskInputValue, needMaskingText } from './utils';
+import {
+  isElement,
+  isShadowRoot,
+  maskImage,
+  maskInputValue,
+  needMaskingText,
+} from './utils';
 
 let _id = 1;
 const tagNameRegex = new RegExp('[^a-z0-9-_:]');
@@ -334,10 +341,12 @@ function serializeNode(
     blockSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
+    maskAll?: boolean;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;
     maskTextFn: MaskTextFn | undefined;
     maskInputFn: MaskInputFn | undefined;
+    maskImageFn?: MaskImageFn;
     inlineImages: boolean;
     recordCanvas: boolean;
     keepIframeSrcFn: KeepIframeSrcFn;
@@ -349,10 +358,12 @@ function serializeNode(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskAll,
     inlineStylesheet,
     maskInputOptions = {},
     maskTextFn,
     maskInputFn,
+    maskImageFn,
     inlineImages,
     recordCanvas,
     keepIframeSrcFn,
@@ -438,6 +449,21 @@ function serializeNode(
         tagName === 'select'
       ) {
         const value = (n as HTMLInputElement | HTMLTextAreaElement).value;
+
+        if (typeof attributes.placeholder === 'string' && attributes.placeholder.length > 0) {
+          attributes.placeholder = maskInputValue({
+            type: attributes.type,
+            tagName,
+            value: attributes.placeholder,
+            maskInputOptions,
+            maskInputFn,
+            node: n,
+            maskTextClass,
+            maskTextSelector,
+            maskAll,
+          });
+        }
+
         if (
           attributes.type !== 'radio' &&
           attributes.type !== 'checkbox' &&
@@ -454,6 +480,7 @@ function serializeNode(
             node: n,
             maskTextClass,
             maskTextSelector,
+            maskAll,
           });
         } else if ((n as HTMLInputElement).checked) {
           attributes.checked = (n as HTMLInputElement).checked;
@@ -472,30 +499,57 @@ function serializeNode(
       if (tagName === 'canvas' && recordCanvas) {
         attributes.rr_dataURL = (n as HTMLCanvasElement).toDataURL();
       }
-      // save image offline
-      if (tagName === 'img' && inlineImages) {
-        if (!canvasService) {
-          canvasService = doc.createElement('canvas');
-          canvasCtx = canvasService.getContext('2d');
-        }
+      if (tagName === 'img') {
+        const needsMasking = needMaskingText(
+          n,
+          maskTextClass,
+          maskTextSelector,
+          maskAll,
+        );
         const image = n as HTMLImageElement;
-        const oldValue = image.crossOrigin;
-        image.crossOrigin = 'anonymous';
-        try {
-          const recordInlineImage = () => {
-            canvasService!.width = image.naturalWidth;
-            canvasService!.height = image.naturalHeight;
-            canvasCtx!.drawImage(image, 0, 0);
-            attributes.rr_dataURL = canvasService!.toDataURL();
-            oldValue
-              ? (attributes.crossOrigin = oldValue)
-              : delete attributes.crossOrigin;
+
+        if (needsMasking) {
+          const replaceImgAttributes = () => {
+            const attrs = maskImage({
+              n: image,
+              attributes,
+              maskImageFn,
+            });
+
+            for (const [attr, value] of Object.entries(attrs)) {
+              attributes[attr] = value;
+            }
           };
-          // The image content may not have finished loading yet.
-          if (image.complete && image.naturalWidth !== 0) recordInlineImage();
-          else image.onload = recordInlineImage;
-        } catch {
-          // ignore error
+
+          if (image.complete) {
+            replaceImgAttributes();
+          } else {
+            image.onload = replaceImgAttributes;
+          }
+        } else if (inlineImages) {
+          // save image offline
+          if (!canvasService) {
+            canvasService = doc.createElement('canvas');
+            canvasCtx = canvasService.getContext('2d');
+          }
+          const oldValue = image.crossOrigin;
+          image.crossOrigin = 'anonymous';
+          try {
+            const recordInlineImage = () => {
+              canvasService!.width = image.naturalWidth;
+              canvasService!.height = image.naturalHeight;
+              canvasCtx!.drawImage(image, 0, 0);
+              attributes.rr_dataURL = canvasService!.toDataURL();
+              oldValue
+                ? (attributes.crossOrigin = oldValue)
+                : delete attributes.crossOrigin;
+            };
+            // The image content may not have finished loading yet.
+            if (image.complete && image.naturalWidth !== 0) recordInlineImage();
+            else image.onload = recordInlineImage;
+          } catch {
+            // ignore error
+          }
         }
       }
       // media elements
@@ -521,6 +575,7 @@ function serializeNode(
           rr_height: `${height}px`,
         };
       }
+
       // iframe
       if (tagName === 'iframe' && !keepIframeSrcFn(attributes.src as string)) {
         if (!(n as HTMLIFrameElement).contentDocument) {
@@ -566,7 +621,7 @@ function serializeNode(
       if (
         !isStyle &&
         !isScript &&
-        needMaskingText(n, maskTextClass, maskTextSelector) &&
+        needMaskingText(n, maskTextClass, maskTextSelector, maskAll) &&
         textContent
       ) {
         textContent = maskTextFn
@@ -704,11 +759,13 @@ export function serializeNodeWithId(
     blockSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
+    maskAll?: boolean;
     skipChild: boolean;
     inlineStylesheet: boolean;
     maskInputOptions?: MaskInputOptions;
     maskTextFn: MaskTextFn | undefined;
     maskInputFn: MaskInputFn | undefined;
+    maskImageFn?: MaskImageFn;
     slimDOMOptions: SlimDOMOptions;
     keepIframeSrcFn?: KeepIframeSrcFn;
     inlineImages?: boolean;
@@ -726,11 +783,13 @@ export function serializeNodeWithId(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskAll,
     skipChild = false,
     inlineStylesheet = true,
     maskInputOptions = {},
     maskTextFn,
     maskInputFn,
+    maskImageFn,
     slimDOMOptions,
     inlineImages = false,
     recordCanvas = false,
@@ -746,10 +805,12 @@ export function serializeNodeWithId(
     blockSelector,
     maskTextClass,
     maskTextSelector,
+    maskAll,
     inlineStylesheet,
     maskInputOptions,
     maskTextFn,
     maskInputFn,
+    maskImageFn,
     inlineImages,
     recordCanvas,
     keepIframeSrcFn,
@@ -810,11 +871,13 @@ export function serializeNodeWithId(
       blockSelector,
       maskTextClass,
       maskTextSelector,
+      maskAll,
       skipChild,
       inlineStylesheet,
       maskInputOptions,
       maskTextFn,
       maskInputFn,
+      maskImageFn,
       slimDOMOptions,
       inlineImages,
       recordCanvas,
@@ -863,11 +926,13 @@ export function serializeNodeWithId(
             blockSelector,
             maskTextClass,
             maskTextSelector,
+            maskAll,
             skipChild: false,
             inlineStylesheet,
             maskInputOptions,
             maskTextFn,
             maskInputFn,
+            maskImageFn,
             slimDOMOptions,
             inlineImages,
             recordCanvas,
@@ -897,10 +962,12 @@ function snapshot(
     blockSelector?: string | null;
     maskTextClass?: string | RegExp;
     maskTextSelector?: string | null;
+    maskAll?: boolean;
     inlineStylesheet?: boolean;
     maskAllInputs?: boolean | MaskInputOptions;
     maskTextFn?: MaskTextFn;
     maskInputFn?: MaskTextFn;
+    maskImageFn?: MaskImageFn;
     slimDOM?: boolean | SlimDOMOptions;
     inlineImages?: boolean;
     recordCanvas?: boolean;
@@ -916,12 +983,14 @@ function snapshot(
     blockSelector = null,
     maskTextClass = 'rr-mask',
     maskTextSelector = null,
+    maskAll = false,
     inlineStylesheet = true,
     inlineImages = false,
     recordCanvas = false,
     maskAllInputs = false,
     maskTextFn,
     maskInputFn,
+    maskImageFn,
     slimDOM = false,
     preserveWhiteSpace,
     onSerialize,
@@ -981,11 +1050,13 @@ function snapshot(
       blockSelector,
       maskTextClass,
       maskTextSelector,
+      maskAll,
       skipChild: false,
       inlineStylesheet,
       maskInputOptions,
       maskTextFn,
       maskInputFn,
+      maskImageFn,
       slimDOMOptions,
       inlineImages,
       recordCanvas,

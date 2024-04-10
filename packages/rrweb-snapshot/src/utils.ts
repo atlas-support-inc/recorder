@@ -1,4 +1,10 @@
-import { INode, MaskInputFn, MaskInputOptions } from './types';
+import {
+  attributes,
+  INode,
+  MaskImageFn,
+  MaskInputFn,
+  MaskInputOptions,
+} from './types';
 
 export function isElement(n: Node | INode): n is Element {
   return n.nodeType === n.ELEMENT_NODE;
@@ -18,6 +24,7 @@ export function maskInputValue({
   node,
   maskTextClass,
   maskTextSelector,
+  maskAll,
 }: {
   maskInputOptions: MaskInputOptions;
   tagName: string;
@@ -27,12 +34,14 @@ export function maskInputValue({
   node: Node;
   maskTextClass: string | RegExp;
   maskTextSelector: string | null;
+  maskAll?: boolean;
 }): string {
   let text = value || '';
+
   if (
     maskInputOptions[tagName.toLowerCase() as keyof MaskInputOptions] ||
     maskInputOptions[type as keyof MaskInputOptions] ||
-    needMaskingText(node, maskTextClass, maskTextSelector)
+    needMaskingText(node, maskTextClass, maskTextSelector, maskAll)
   ) {
     if (maskInputFn) {
       text = maskInputFn(text);
@@ -47,6 +56,7 @@ export function needMaskingText(
   node: Node | null,
   maskTextClass: string | RegExp,
   maskTextSelector: string | null,
+  maskAll?: boolean,
 ): boolean {
   if (!node) {
     return false;
@@ -67,12 +77,61 @@ export function needMaskingText(
       if ((node as HTMLElement).matches(maskTextSelector)) {
         return true;
       }
+
+      if (maskAll) {
+        if (!maskTextClass) {
+          return false;
+        }
+
+        // When maskAll is true, maskTextSelector contains selectors which are excluded
+        const closestNodeToMaskOrExclude = (node as HTMLElement)?.closest(
+          `.${maskTextClass}, ${maskTextSelector} > *`,
+        );
+
+        return !!closestNodeToMaskOrExclude?.classList.contains(
+          maskTextClass as string,
+        );
+      }
     }
-    return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
+
+    return needMaskingText(
+      node.parentNode,
+      maskTextClass,
+      maskTextSelector,
+      maskAll,
+    );
   }
-  if (node.nodeType === node.TEXT_NODE) {
-    // check parent node since text node do not have class name
-    return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
+
+  return needMaskingText(
+    node.parentNode,
+    maskTextClass,
+    maskTextSelector,
+    maskAll,
+  );
+}
+
+export function maskImage({
+  n,
+  attributes,
+  maskImageFn,
+}: {
+  n: HTMLImageElement;
+  attributes: attributes;
+  maskImageFn?: MaskImageFn;
+}) {
+  const alt =
+    typeof attributes.alt === 'string' && attributes.alt.length > 0
+      ? '*'.repeat(attributes.alt.length)
+      : '';
+
+  if (maskImageFn) {
+    const attrs = maskImageFn(n, attributes);
+    return 'alt' in attrs ? attrs : { ...attrs, alt };
   }
-  return needMaskingText(node.parentNode, maskTextClass, maskTextSelector);
+
+  return {
+    srcset: '',
+    src: '',
+    alt,
+  };
 }

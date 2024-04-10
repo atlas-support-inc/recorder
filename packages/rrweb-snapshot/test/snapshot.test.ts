@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { absoluteToStylesheet, _isBlockedElement } from '../src/snapshot';
+import { _isBlockedElement, absoluteToStylesheet } from '../src/snapshot';
 
 describe('absolute url to stylesheet', () => {
   const href = 'http://localhost/css/style.css';

@@ -1,4 +1,4 @@
-import { serializedNodeWithId, INode, idNodeMap, MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, KeepIframeSrcFn } from './types';
+import { serializedNodeWithId, INode, idNodeMap, MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, KeepIframeSrcFn, MaskImageFn } from './types';
 export declare const IGNORED_NODE = -2;
 export declare function absoluteToStylesheet(cssText: string | null, href: string): string;
 export declare function absoluteToDoc(doc: Document, attributeValue: string): string;
@@ -11,11 +11,13 @@ export declare function serializeNodeWithId(n: Node | INode, options: {
     blockSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
+    maskAll?: boolean;
     skipChild: boolean;
     inlineStylesheet: boolean;
     maskInputOptions?: MaskInputOptions;
     maskTextFn: MaskTextFn | undefined;
     maskInputFn: MaskInputFn | undefined;
+    maskImageFn?: MaskImageFn;
     slimDOMOptions: SlimDOMOptions;
     keepIframeSrcFn?: KeepIframeSrcFn;
     inlineImages?: boolean;
@@ -30,10 +32,12 @@ declare function snapshot(n: Document, options?: {
     blockSelector?: string | null;
     maskTextClass?: string | RegExp;
     maskTextSelector?: string | null;
+    maskAll?: boolean;
     inlineStylesheet?: boolean;
     maskAllInputs?: boolean | MaskInputOptions;
     maskTextFn?: MaskTextFn;
     maskInputFn?: MaskTextFn;
+    maskImageFn?: MaskImageFn;
     slimDOM?: boolean | SlimDOMOptions;
     inlineImages?: boolean;
     recordCanvas?: boolean;

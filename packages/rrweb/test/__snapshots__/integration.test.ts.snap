@@ -14,6 +14,7 @@ exports[`record integration tests can freeze mutations 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -188,6 +189,7 @@ exports[`record integration tests can mask character data mutations 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -379,6 +381,7 @@ exports[`record integration tests can record attribute mutation 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -538,6 +541,7 @@ exports[`record integration tests can record character data muatations 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -704,6 +708,7 @@ exports[`record integration tests can record childList mutations 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -868,6 +873,7 @@ exports[`record integration tests can record form interactions 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"form fields\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -1634,6 +1640,7 @@ exports[`record integration tests can record node mutations 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Select2 3.5\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -2646,6 +2653,7 @@ exports[`record integration tests can use maskInputOptions to configure which ty
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"form fields\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -3500,6 +3508,7 @@ exports[`record integration tests should mask texts 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Mask text\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -3778,6 +3787,7 @@ exports[`record integration tests should mask texts using maskTextFn 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Mask text\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -4056,6 +4066,7 @@ exports[`record integration tests should mask value attribute with maskInputOpti
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Document\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -4417,6 +4428,7 @@ exports[`record integration tests should nest record iframe 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Main\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -5127,6 +5139,7 @@ exports[`record integration tests should not record blocked elements and its chi
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Block record\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -5307,6 +5320,7 @@ exports[`record integration tests should not record blocked elements dynamically
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Block record\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -5513,6 +5527,7 @@ exports[`record integration tests should not record input events on ignored elem
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"ignore fields\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -5738,6 +5753,7 @@ exports[`record integration tests should not record input values if maskAllInput
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"form fields\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -6591,6 +6607,7 @@ exports[`record integration tests should record DOM node movement 1 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -6858,6 +6875,7 @@ exports[`record integration tests should record DOM node movement 2 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -7136,6 +7154,7 @@ exports[`record integration tests should record canvas mutations 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"canvas\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -7360,6 +7379,7 @@ exports[`record integration tests should record console messages 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Log record\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -7851,6 +7871,7 @@ exports[`record integration tests should record dynamic CSS changes 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"react styled components\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -8247,6 +8268,7 @@ exports[`record integration tests should record input userTriggered values if us
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"form fields\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -9130,6 +9152,7 @@ exports[`record integration tests should record shadow DOM 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"Shadow DOM Observer\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
@@ -9536,6 +9559,7 @@ exports[`record integration tests will serialize node before record 1`] = `
     \\"type\\": 4,
     \\"data\\": {
       \\"href\\": \\"about:blank\\",
+      \\"title\\": \\"\\",
       \\"width\\": 1920,
       \\"height\\": 1080
     }
