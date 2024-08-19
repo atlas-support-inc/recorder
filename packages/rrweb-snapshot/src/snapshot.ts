@@ -67,7 +67,11 @@ function getAllBrokenAnimationProperties(cssString: string): string[] {
 function getCssRulesString(doc: Document, s: CSSStyleSheet): string | null {
   try {
     const rules = s.rules || s.cssRules;
-    return rules ? Array.from(rules).map(rule => getCssRuleString(doc, rule)).join('') : null;
+    return rules
+      ? Array.from(rules)
+          .map((rule) => getCssRuleString(doc, rule))
+          .join('')
+      : null;
   } catch (error) {
     return null;
   }
@@ -77,7 +81,8 @@ function getCssRuleString(doc: Document, rule: CSSRule | CSSStyleRule): string {
   let cssStringified = rule.cssText;
   if (isCSSImportRule(rule)) {
     try {
-      cssStringified = getCssRulesString(doc, rule.styleSheet) || cssStringified;
+      cssStringified =
+        getCssRulesString(doc, rule.styleSheet) || cssStringified;
     } catch {
       // ignore
     }
@@ -87,7 +92,8 @@ function getCssRuleString(doc: Document, rule: CSSRule | CSSStyleRule): string {
     cssStringified,
   );
   if (animationPropsWithEmptyValues.length > 0) {
-    const actualElement = 'selectorText' in rule && doc.querySelector(rule.selectorText);
+    const actualElement =
+      'selectorText' in rule && doc.querySelector(rule.selectorText);
 
     if (actualElement && window) {
       const computedStyle = window.getComputedStyle(actualElement);
@@ -362,10 +368,10 @@ function onceIframeLoaded(
   iframeEl.addEventListener('load', listener);
 }
 
-function stringifyStyleSheet(sheet: CSSStyleSheet): string {
+function stringifyStyleSheet(doc: Document, sheet: CSSStyleSheet): string {
   return sheet.cssRules
     ? Array.from(sheet.cssRules)
-        .map((rule) => rule.cssText || '')
+        .map((rule) => getCssRuleString(doc, rule))
         .join('')
     : '';
 }
@@ -648,6 +654,7 @@ function serializeNode(
           // try to read style sheet
           if ((n.parentNode as HTMLStyleElement).sheet?.cssRules) {
             textContent = stringifyStyleSheet(
+              doc,
               (n.parentNode as HTMLStyleElement).sheet!,
             );
           }
