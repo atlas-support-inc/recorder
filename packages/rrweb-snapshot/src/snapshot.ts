@@ -46,24 +46,67 @@ function getValidTagName(element: HTMLElement): string {
   return processedTagName;
 }
 
-function getCssRulesString(s: CSSStyleSheet): string | null {
+function getAllBrokenAnimationProperties(cssString: string): string[] {
+  // Match all instances of CSS properties starting with "animation" or exactly "animation" with missing values
+  const propertiesWithMissingValues: string[] = [];
+  const regex = /\b(animation[\w-]*):\s*(var\([^)]*\))?;\s*/g;
+
+  let match = regex.exec(cssString);
+  while (match !== null) {
+    const [, property, variable] = match;
+    if (!variable) {
+      propertiesWithMissingValues.push(property);
+    }
+
+    match = regex.exec(cssString);
+  }
+
+  return propertiesWithMissingValues;
+}
+
+function getCssRulesString(doc: Document, s: CSSStyleSheet): string | null {
   try {
     const rules = s.rules || s.cssRules;
-    return rules ? Array.from(rules).map(getCssRuleString).join('') : null;
+    return rules
+      ? Array.from(rules)
+          .map((rule) => getCssRuleString(doc, rule))
+          .join('')
+      : null;
   } catch (error) {
     return null;
   }
 }
 
-function getCssRuleString(rule: CSSRule): string {
+function getCssRuleString(doc: Document, rule: CSSRule | CSSStyleRule): string {
   let cssStringified = rule.cssText;
   if (isCSSImportRule(rule)) {
     try {
-      cssStringified = getCssRulesString(rule.styleSheet) || cssStringified;
+      cssStringified =
+        getCssRulesString(doc, rule.styleSheet) || cssStringified;
     } catch {
       // ignore
     }
   }
+
+  const animationPropsWithEmptyValues = getAllBrokenAnimationProperties(
+    cssStringified,
+  );
+  if (animationPropsWithEmptyValues.length > 0) {
+    const actualElement =
+      'selectorText' in rule && doc.querySelector(rule.selectorText);
+
+    if (actualElement && window) {
+      const computedStyle = window.getComputedStyle(actualElement);
+      for (const prop of animationPropsWithEmptyValues) {
+        const computedValue = computedStyle[prop as keyof CSSStyleDeclaration];
+        cssStringified = cssStringified.replace(
+          `${prop}: ;`,
+          `${prop}: ${computedValue};`,
+        );
+      }
+    }
+  }
+
   return cssStringified;
 }
 
@@ -325,10 +368,10 @@ function onceIframeLoaded(
   iframeEl.addEventListener('load', listener);
 }
 
-function stringifyStyleSheet(sheet: CSSStyleSheet): string {
+function stringifyStyleSheet(doc: Document, sheet: CSSStyleSheet): string {
   return sheet.cssRules
     ? Array.from(sheet.cssRules)
-        .map((rule) => rule.cssText || '')
+        .map((rule) => getCssRuleString(doc, rule))
         .join('')
     : '';
 }
@@ -414,7 +457,7 @@ function serializeNode(
         const stylesheet = Array.from(doc.styleSheets).find((s) => {
           return s.href === (n as HTMLLinkElement).href;
         });
-        const cssText = getCssRulesString(stylesheet as CSSStyleSheet);
+        const cssText = getCssRulesString(doc, stylesheet as CSSStyleSheet);
         if (cssText) {
           delete attributes.rel;
           delete attributes.href;
@@ -436,6 +479,7 @@ function serializeNode(
         ).trim().length
       ) {
         const cssText = getCssRulesString(
+          doc,
           (n as HTMLStyleElement).sheet as CSSStyleSheet,
         );
         if (cssText) {
@@ -450,7 +494,10 @@ function serializeNode(
       ) {
         const value = (n as HTMLInputElement | HTMLTextAreaElement).value;
 
-        if (typeof attributes.placeholder === 'string' && attributes.placeholder.length > 0) {
+        if (
+          typeof attributes.placeholder === 'string' &&
+          attributes.placeholder.length > 0
+        ) {
           attributes.placeholder = maskInputValue({
             type: attributes.type,
             tagName,
@@ -607,6 +654,7 @@ function serializeNode(
           // try to read style sheet
           if ((n.parentNode as HTMLStyleElement).sheet?.cssRules) {
             textContent = stringifyStyleSheet(
+              doc,
               (n.parentNode as HTMLStyleElement).sheet!,
             );
           }
