@@ -1,6 +1,6 @@
 {
   "name": "@atlasinc/rrweb",
-  "version": "1.1.15",
+  "version": "1.1.16",
   "description": "record and replay the web",
   "scripts": {
     "prepare": "npm run prepack",
@@ -76,6 +76,6 @@
     "@xstate/fsm": "^1.4.0",
     "fflate": "^0.4.4",
     "mitt": "^1.1.3",
-    "rrweb-snapshot": "npm:@atlasinc/rrweb-snapshot@1.1.17"
+    "rrweb-snapshot": "npm:@atlasinc/rrweb-snapshot@1.1.18"
   }
 }
