@@ -541,14 +541,40 @@ export default class MutationBuffer {
         }
 
         if (tagName === 'img') {
-          const attrs = maskImage({
-            n: target as HTMLImageElement,
-            attributes: item.attributes as { [p: string]: string },
-            maskImageFn: this.maskImageFn,
-          });
+          const needsMasking = needMaskingText(
+            m.target,
+            this.maskTextClass,
+            this.maskTextSelector,
+            this.maskAll,
+          );
 
-          for (const [attr, val] of Object.entries(attrs)) {
-            item.attributes[attr] = val as string;
+          if (needsMasking) {
+            const attrs = maskImage({
+              n: target as HTMLImageElement,
+              attributes: item.attributes as { [p: string]: string },
+              maskImageFn: this.maskImageFn,
+            });
+
+            for (const [attr, val] of Object.entries(attrs)) {
+              item.attributes[attr] = val as string;
+            }
+          } else {
+            // reset attributes if needed
+            const attributesToReset = ['src', 'srcset', 'alt'].filter(a => a !== m.attributeName);
+
+            for (const attr of attributesToReset) {
+              const targetValue = target.getAttribute(attr) || '';
+              const attributeNewValue = transformAttribute(
+                this.doc,
+                target.tagName,
+                attr,
+                targetValue,
+              );
+
+              if (item.attributes[attr] !== attributeNewValue) {
+                item.attributes[attr] = attributeNewValue;
+              }
+            }
           }
         }
         break;
