@@ -522,7 +522,7 @@ export class Replayer {
       this.nextUserInteractionEvent = null;
       this.backToNormal();
     }
-    if (this.config.skipInactive && !isUserInteraction(event)) {
+    if (this.config.skipInactive) {
       if (!this.nextUserInteractionEvent) {
         let hasFollowingInteraction = false;
         for (const _event of this.service.state.context.events) {
