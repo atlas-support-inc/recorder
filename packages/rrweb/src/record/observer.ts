@@ -477,9 +477,25 @@ function initInputObserver(
     }
   }
   const events = sampling.input === 'last' ? ['change'] : ['input', 'change'];
+
+  let timerId: ReturnType<typeof setTimeout>;
+
+  const wrappedEventHandler = (e: Event) => {
+    if (sampling.input !== 'debounce') {
+      return eventHandler(e);
+    }
+
+    clearTimeout(timerId);
+    const debounceMs = typeof sampling.inputDebounce === 'number' ? sampling.inputDebounce : 500;
+
+    timerId = setTimeout(() => {
+      eventHandler(e);
+    }, debounceMs);
+  };
+
   const handlers: Array<
     listenerHandler | hookResetter
-  > = events.map((eventName) => on(eventName, eventHandler, doc));
+  > = events.map((eventName) => on(eventName, wrappedEventHandler, doc));
   const propertyDescriptor = Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
     'value',
@@ -499,7 +515,7 @@ function initInputObserver(
         hookSetter<HTMLElement>(p[0], p[1], {
           set() {
             // mock to a normal event
-            eventHandler({ target: this } as Event);
+            wrappedEventHandler({ target: this } as Event);
           },
         }),
       ),
