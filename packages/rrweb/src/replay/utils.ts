@@ -31,7 +31,6 @@ export function getInactivityRanges(
   events.forEach((event, idx) => {
     if (isUserInteraction(event)) {
       lastInteraction = event;
-      return;
     }
 
     const nextUserInteractionEvent = events.slice(idx + 1).find(isUserInteraction);
