@@ -428,7 +428,7 @@ function initInputObserver(
         node: target as Node,
         maskTextClass,
         maskTextSelector,
-        maskAll
+        maskAll,
       });
     }
     cbWithDedup(
@@ -481,12 +481,17 @@ function initInputObserver(
   let timerId: ReturnType<typeof setTimeout>;
 
   const wrappedEventHandler = (e: Event) => {
-    if (sampling.input !== 'debounce') {
+    const isCheckboxOrRadioElement =
+      (e.target as HTMLInputElement)?.type === 'checkbox' ||
+      (e.target as HTMLInputElement)?.type === 'radio';
+
+    if (sampling.input !== 'debounce' || isCheckboxOrRadioElement) {
       return eventHandler(e);
     }
 
     clearTimeout(timerId);
-    const debounceMs = typeof sampling.inputDebounce === 'number' ? sampling.inputDebounce : 500;
+    const debounceMs =
+      typeof sampling.inputDebounce === 'number' ? sampling.inputDebounce : 500;
 
     timerId = setTimeout(() => {
       eventHandler(e);
