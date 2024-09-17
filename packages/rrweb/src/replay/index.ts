@@ -64,6 +64,11 @@ import {
 } from './virtual-styles';
 import { isUserInteraction, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
 
+// Fix for Shopify's shorthand CSS properties (animation)
+// This is a PostHog way to fix it: https://github.com/PostHog/posthog/pull/22942
+const shopifyShorthandCSSFix =
+  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }'
+
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
 const mitt = (mittProxy as any).default || mittProxy;
@@ -146,7 +151,7 @@ export class Replayer {
       showDebug: false,
       blockClass: 'rr-block',
       liveMode: false,
-      insertStyleRules: [],
+      insertStyleRules: [shopifyShorthandCSSFix],
       triggerFocus: true,
       UNSAFE_replayCanvas: false,
       pauseAnimation: true,
