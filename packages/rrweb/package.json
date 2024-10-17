@@ -1,6 +1,6 @@
 {
   "name": "@atlasinc/rrweb",
-  "version": "1.1.18",
+  "version": "1.1.19",
   "description": "record and replay the web",
   "scripts": {
     "prepare": "npm run prepack",

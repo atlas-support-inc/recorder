@@ -186,7 +186,7 @@ export class Replayer {
       this.virtualStyleRulesMap.clear();
 
       for (const d of scrollMap.values()) {
-        this.applyScroll(d);
+        this.applyScroll(d, { smooth: false });
       }
       for (const d of inputMap.values()) {
         this.applyInput(d);
@@ -1015,7 +1015,7 @@ export class Replayer {
           this.treeIndex.scroll(d);
           break;
         }
-        this.applyScroll(d);
+        this.applyScroll(d, { smooth: !isSync });
         break;
       }
       case IncrementalSource.ViewportResize:
@@ -1637,8 +1637,10 @@ export class Replayer {
     });
   }
 
-  private applyScroll(d: scrollData) {
+  private applyScroll(d: scrollData, options: { smooth?: boolean }) {
     const target = this.mirror.getNode(d.id);
+    const behavior = options.smooth ? 'smooth' : 'auto';
+
     if (!target) {
       return this.debugNodeNotFound(d, d.id);
     }
@@ -1646,14 +1648,14 @@ export class Replayer {
       this.iframe.contentWindow!.scrollTo({
         top: d.y,
         left: d.x,
-        behavior: 'smooth',
+        behavior,
       });
     } else if (target.__sn_atlas.type === NodeType.Document) {
       // nest iframe content document
       ((target as unknown) as Document).defaultView!.scrollTo({
         top: d.y,
         left: d.x,
-        behavior: 'smooth',
+        behavior,
       });
     } else {
       try {
@@ -1662,7 +1664,7 @@ export class Replayer {
         ((target as Node) as Element).scrollTo({
           top: d.y,
           left: d.x,
-          behavior: "auto",
+          behavior: 'auto',
         });
       } catch (error) {
         /**
