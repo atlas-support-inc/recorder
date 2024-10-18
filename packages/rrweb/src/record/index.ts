@@ -211,18 +211,20 @@ function record<T = eventWithTime>(
   });
 
   takeFullSnapshot = (isCheckout = false) => {
-    wrappedEmit(
-      wrapEvent({
-        type: EventType.Meta,
-        data: {
-          href: window.location.href,
-          title: document.title,
-          width: getWindowWidth(),
-          height: getWindowHeight(),
-        },
-      }),
-      isCheckout,
-    );
+    if (!isCheckout) {
+      wrappedEmit(
+        wrapEvent({
+          type: EventType.Meta,
+          data: {
+            href: window.location.href,
+            title: document.title,
+            width: getWindowWidth(),
+            height: getWindowHeight(),
+          },
+        }),
+        isCheckout,
+      );
+    }
 
     mutationBuffers.forEach((buf) => buf.lock()); // don't allow any mirror modifications during snapshotting
     const [node, idNodeMap] = snapshot(document, {
