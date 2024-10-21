@@ -216,10 +216,18 @@ export type RecordPlugin<TOptions = unknown> = {
   options: TOptions;
 };
 
+export type TMutationRateLimiterOptions = Partial<{
+  enabled: boolean;
+  bucketSize: number;
+  refillRate: number;
+  onBlockedNode: (id: number) => void;
+}>;
+
 export type recordOptions<T> = {
   emit?: (e: T, isCheckout?: boolean) => void;
   checkoutEveryNth?: number;
   checkoutEveryNms?: number;
+  checkoutMode?: 'all' | 'any';
   blockClass?: blockClass;
   blockSelector?: string;
   ignoreClass?: string;
@@ -244,6 +252,7 @@ export type recordOptions<T> = {
   // departed, please use sampling options
   mousemoveWait?: number;
   keepIframeSrcFn?: KeepIframeSrcFn;
+  mutationRateLimiterOptions?: TMutationRateLimiterOptions;
 };
 
 export type observerParam = {

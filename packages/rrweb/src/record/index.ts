@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { IframeManager } from './iframe-manager';
 import { ShadowDomManager } from './shadow-dom-manager';
+import { MutationRateLimiter } from './mutation-rate-limiter';
 
 function wrapEvent(e: event): eventWithTime {
   return {
@@ -41,6 +42,7 @@ function record<T = eventWithTime>(
     emit,
     checkoutEveryNms,
     checkoutEveryNth,
+    checkoutMode = 'any',
     blockClass = 'rr-block',
     blockSelector = null,
     ignoreClass = 'rr-ignore',
@@ -64,6 +66,7 @@ function record<T = eventWithTime>(
     inlineImages = false,
     plugins,
     keepIframeSrcFn = () => false,
+    mutationRateLimiterOptions,
   } = options;
   // runtime checks for user options
   if (!emit) {
@@ -118,6 +121,10 @@ function record<T = eventWithTime>(
       ? _slimDOMOptions
       : {};
 
+  let mutationRateLimiter = mutationRateLimiterOptions?.enabled
+    ? new MutationRateLimiter(mirror, mutationRateLimiterOptions)
+    : undefined;
+
   polyfill();
 
   let lastFullSnapshotEvent: eventWithTime;
@@ -134,6 +141,14 @@ function record<T = eventWithTime>(
       // we've got a user initiated event so first we need to apply
       // all DOM changes that have been buffering during paused state
       mutationBuffers.forEach((buf) => buf.unfreeze());
+    }
+
+    const event = mutationRateLimiter
+      ? mutationRateLimiter.throttleMutations(e)
+      : e;
+    // Don't emit event if node is blocked
+    if (!event) {
+      return;
     }
 
     emit(((packFn ? packFn(e) : e) as unknown) as T, isCheckout);
@@ -155,7 +170,11 @@ function record<T = eventWithTime>(
       const exceedTime =
         checkoutEveryNms &&
         e.timestamp - lastFullSnapshotEvent.timestamp > checkoutEveryNms;
-      if (exceedCount || exceedTime) {
+
+      if (
+        (checkoutMode === 'all' && exceedCount && exceedTime) ||
+        (checkoutMode === 'any' && (exceedCount || exceedTime))
+      ) {
         takeFullSnapshot(true);
       }
     }
@@ -211,18 +230,20 @@ function record<T = eventWithTime>(
   });
 
   takeFullSnapshot = (isCheckout = false) => {
-    wrappedEmit(
-      wrapEvent({
-        type: EventType.Meta,
-        data: {
-          href: window.location.href,
-          title: document.title,
-          width: getWindowWidth(),
-          height: getWindowHeight(),
-        },
-      }),
-      isCheckout,
-    );
+    if (!isCheckout) {
+      wrappedEmit(
+        wrapEvent({
+          type: EventType.Meta,
+          data: {
+            href: window.location.href,
+            title: document.title,
+            width: getWindowWidth(),
+            height: getWindowHeight(),
+          },
+        }),
+        isCheckout,
+      );
+    }
 
     mutationBuffers.forEach((buf) => buf.lock()); // don't allow any mirror modifications during snapshotting
     const [node, idNodeMap] = snapshot(document, {
@@ -463,8 +484,14 @@ function record<T = eventWithTime>(
         ),
       );
     }
+    // recording stop
     return () => {
       handlers.forEach((h) => h());
+
+      if (mutationRateLimiter) {
+        mutationRateLimiter.cleanup();
+        mutationRateLimiter = undefined;
+      }
     };
   } catch (error) {
     // TODO: handle internal error

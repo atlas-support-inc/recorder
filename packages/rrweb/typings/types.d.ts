@@ -132,10 +132,17 @@ export declare type RecordPlugin<TOptions = unknown> = {
     observer: (cb: Function, win: IWindow, options: TOptions) => listenerHandler;
     options: TOptions;
 };
+export declare type TMutationRateLimiterOptions = Partial<{
+    enabled: boolean;
+    bucketSize: number;
+    refillRate: number;
+    onBlockedNode: (id: number) => void;
+}>;
 export declare type recordOptions<T> = {
     emit?: (e: T, isCheckout?: boolean) => void;
     checkoutEveryNth?: number;
     checkoutEveryNms?: number;
+    checkoutMode?: 'all' | 'any';
     blockClass?: blockClass;
     blockSelector?: string;
     ignoreClass?: string;
@@ -159,6 +166,7 @@ export declare type recordOptions<T> = {
     plugins?: RecordPlugin[];
     mousemoveWait?: number;
     keepIframeSrcFn?: KeepIframeSrcFn;
+    mutationRateLimiterOptions?: TMutationRateLimiterOptions;
 };
 export declare type observerParam = {
     mutationCb: mutationCallBack;
