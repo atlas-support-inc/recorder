@@ -52,6 +52,10 @@ export declare type serializedNodeWithId = serializedNode & {
 export declare type tagMap = {
     [key: string]: string;
 };
+export declare type DialogAttributes = {
+    open: string;
+    rr_open_mode: 'modal' | 'non-modal';
+};
 export interface INode extends Node {
     __sn_atlas: serializedNodeWithId;
 }

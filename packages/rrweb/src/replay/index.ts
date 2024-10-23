@@ -63,6 +63,7 @@ import {
   getPositionsAndIndex,
 } from './virtual-styles';
 import { isUserInteraction, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
+import { applyDialogToTopLevel, removeDialogFromTopLevel } from './dialog';
 
 // Fix for Shopify's shorthand CSS properties (animation)
 // This is a PostHog way to fix it: https://github.com/PostHog/posthog/pull/22942
@@ -677,15 +678,19 @@ export class Replayer {
       );
     }
     this.legacy_missingNodeRetryMap = {};
-    const collected: AppendedIframe[] = [];
+    const collectedIframes: AppendedIframe[] = [];
+    const collectedDialogs = new Set<HTMLDialogElement>();
     this.mirror.map = rebuild(event.data.node, {
       doc: this.iframe.contentDocument,
       afterAppend: (builtNode) => {
-        this.collectIframeAndAttachDocument(collected, builtNode);
+        if (builtNode.nodeName === 'DIALOG') {
+          collectedDialogs.add(builtNode as unknown as HTMLDialogElement);
+        }
+        this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
       cache: this.cache,
     })[1];
-    for (const { mutationInQueue, builtNode } of collected) {
+    for (const { mutationInQueue, builtNode } of collectedIframes) {
       this.attachDocumentToIframe(mutationInQueue, builtNode);
       this.newDocumentQueue = this.newDocumentQueue.filter(
         (m) => m !== mutationInQueue,
@@ -697,6 +702,8 @@ export class Replayer {
     }
     const { documentElement, head } = this.iframe.contentDocument;
     this.insertStyleRules(documentElement, head);
+
+    collectedDialogs.forEach((d) => applyDialogToTopLevel(d));
     if (!this.service.state.matches('playing')) {
       this.iframe.contentDocument
         .getElementsByTagName('html')[0]
@@ -734,7 +741,8 @@ export class Replayer {
     mutation: addedNodeMutation,
     iframeEl: HTMLIFrameElement,
   ) {
-    const collected: AppendedIframe[] = [];
+    const collectedIframes: AppendedIframe[] = [];
+    const collectedDialogs = new Set<HTMLDialogElement>();
     // If iframeEl is detached from dom, iframeEl.contentDocument is null.
     if (!iframeEl.contentDocument) {
       let parent = iframeEl.parentNode;
@@ -755,11 +763,14 @@ export class Replayer {
       hackCss: true,
       skipChild: false,
       afterAppend: (builtNode) => {
-        this.collectIframeAndAttachDocument(collected, builtNode);
+        if (builtNode.nodeName === 'DIALOG') {
+          collectedDialogs.add(builtNode as unknown as HTMLDialogElement);
+        }
+        this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
       cache: this.cache,
     });
-    for (const { mutationInQueue, builtNode } of collected) {
+    for (const { mutationInQueue, builtNode } of collectedIframes) {
       this.attachDocumentToIframe(mutationInQueue, builtNode);
       this.newDocumentQueue = this.newDocumentQueue.filter(
         (m) => m !== mutationInQueue,
@@ -769,6 +780,8 @@ export class Replayer {
         this.insertStyleRules(documentElement, head);
       }
     }
+
+    collectedDialogs.forEach((d) => applyDialogToTopLevel(d));
   }
 
   private collectIframeAndAttachDocument(
@@ -1458,12 +1471,16 @@ export class Replayer {
         this.attachDocumentToIframe(mutation, parent);
         return;
       }
+      const afterAppend = (node: Node) => {
+        applyDialogToTopLevel(node);
+      };
       const target = buildNodeWithSN(mutation.node, {
         doc: targetDoc as Document,
         map: this.mirror.map,
         skipChild: true,
         hackCss: true,
         cache: this.cache,
+        afterAppend,
       }) as INode;
 
       // legacy data, we should not have -1 siblings any more
@@ -1510,6 +1527,11 @@ export class Replayer {
 
         parent.appendChild(target);
       }
+
+      /**
+       * target was added, execute apply dialogs
+       */
+      afterAppend(target);
 
       if (isIframeINode(target)) {
         const mutationInQueue = this.newDocumentQueue.find(
@@ -1606,9 +1628,16 @@ export class Replayer {
           const value = mutation.attributes[attributeName];
           if (value === null) {
             ((target as Node) as Element).removeAttribute(attributeName);
+            if (attributeName === 'open') {
+              removeDialogFromTopLevel(target, mutation);
+            }
           } else if (typeof value === 'string') {
             try {
               ((target as Node) as Element).setAttribute(attributeName, value);
+
+              if (attributeName === 'rr_open_mode' && target.nodeName === 'DIALOG') {
+                applyDialogToTopLevel(target, mutation);
+              }
             } catch (error) {
               if (this.config.showWarning) {
                 console.warn(
