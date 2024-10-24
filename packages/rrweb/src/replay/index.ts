@@ -33,6 +33,7 @@ import {
   scrollData,
   inputData,
   canvasMutationData,
+  attributeMutation,
   Mirror,
   ElementState,
   styleAttributeValue,
@@ -62,13 +63,17 @@ import {
   getNestedRule,
   getPositionsAndIndex,
 } from './virtual-styles';
-import { isUserInteraction, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
+import {
+  isUserInteraction,
+  SKIP_TIME_INTERVAL,
+  SKIP_TIME_THRESHOLD,
+} from './utils';
 import { applyDialogToTopLevel, removeDialogFromTopLevel } from './dialog';
 
 // Fix for Shopify's shorthand CSS properties (animation)
 // This is a PostHog way to fix it: https://github.com/PostHog/posthog/pull/22942
 const shopifyShorthandCSSFix =
-  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }'
+  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }';
 
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
@@ -173,7 +178,7 @@ export class Replayer {
     this.virtualStyleRulesMap = new Map();
 
     this.emitter.on(ReplayerEvents.Flush, () => {
-      const { scrollMap, inputMap } = this.treeIndex.flush();
+      const { scrollMap, inputMap, dialogMap } = this.treeIndex.flush();
 
       this.fragmentParentMap.forEach((parent, frag) =>
         this.restoreRealParent(frag, parent),
@@ -191,6 +196,9 @@ export class Replayer {
       }
       for (const d of inputMap.values()) {
         this.applyInput(d);
+      }
+      for (const d of dialogMap.values()) {
+        this.applyDialog(d);
       }
     });
     this.emitter.on(ReplayerEvents.PlayBack, () => {
@@ -288,9 +296,17 @@ export class Replayer {
   public setConfig(config: Partial<playerConfig>) {
     Object.keys(config).forEach((key) => {
       // If skipInactive was changed from false -> true, check if it can be skipped
-      if (key === 'skipInactive' && !this.config.skipInactive && config[key] && this.service.state.context.lastPlayedEvent) {
+      if (
+        key === 'skipInactive' &&
+        !this.config.skipInactive &&
+        config[key] &&
+        this.service.state.context.lastPlayedEvent
+      ) {
         this.config.skipInactive = true;
-        this.maybeSkipInactive(this.service.state.context.lastPlayedEvent, false);
+        this.maybeSkipInactive(
+          this.service.state.context.lastPlayedEvent,
+          false,
+        );
         return;
       }
 
@@ -541,20 +557,23 @@ export class Replayer {
 
           if (isUserInteraction(_event)) {
             hasFollowingInteraction = true;
-            if (
-              _eventDelay! - eventDelay! >
-              SKIP_TIME_THRESHOLD
-            ) {
+            if (_eventDelay! - eventDelay! > SKIP_TIME_THRESHOLD) {
               this.nextUserInteractionEvent = _event;
             }
             break;
           }
         }
 
-        if (!this.nextUserInteractionEvent && !hasFollowingInteraction && this.service.state.context.events.length) {
+        if (
+          !this.nextUserInteractionEvent &&
+          !hasFollowingInteraction &&
+          this.service.state.context.events.length
+        ) {
           // Was not able to find a next user interaction event.
           // Use last one
-          const lastEvent = this.service.state.context.events[this.service.state.context.events.length - 1];
+          const lastEvent = this.service.state.context.events[
+            this.service.state.context.events.length - 1
+          ];
           if (lastEvent.timestamp > event.timestamp) {
             this.nextUserInteractionEvent = lastEvent;
           }
@@ -566,7 +585,7 @@ export class Replayer {
 
           const payload = {
             // inactive period play time max 3 secs
-            speed: Math.round(skipTime / SKIP_TIME_INTERVAL)
+            speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
           };
           this.speedService.send({ type: 'FAST_FORWARD', payload });
           this.emitter.emit(ReplayerEvents.SkipStart, payload);
@@ -684,7 +703,7 @@ export class Replayer {
       doc: this.iframe.contentDocument,
       afterAppend: (builtNode) => {
         if (builtNode.nodeName === 'DIALOG') {
-          collectedDialogs.add(builtNode as unknown as HTMLDialogElement);
+          collectedDialogs.add((builtNode as unknown) as HTMLDialogElement);
         }
         this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
@@ -764,7 +783,7 @@ export class Replayer {
       skipChild: false,
       afterAppend: (builtNode) => {
         if (builtNode.nodeName === 'DIALOG') {
-          collectedDialogs.add(builtNode as unknown as HTMLDialogElement);
+          collectedDialogs.add((builtNode as unknown) as HTMLDialogElement);
         }
         this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
@@ -1330,7 +1349,9 @@ export class Replayer {
       if (parent) {
         let realTarget = null;
         const realParent =
-          '__sn_atlas' in parent ? this.fragmentParentMap.get(parent) : undefined;
+          '__sn_atlas' in parent
+            ? this.fragmentParentMap.get(parent)
+            : undefined;
         if (realParent && realParent.contains(target)) {
           parent = realParent;
         } else if (this.fragmentParentMap.has(target)) {
@@ -1439,7 +1460,11 @@ export class Replayer {
             virtualParent.appendChild(parent.firstChild);
           }
           parent = virtualParent;
-        } else if (parentHasIframeChild && "tagName" in mutation.node && mutation.node.tagName === "style") {
+        } else if (
+          parentHasIframeChild &&
+          'tagName' in mutation.node &&
+          mutation.node.tagName === 'style'
+        ) {
           notVirtualStylesBecauseOfSiblingIframe.add(mutation.node.id);
         }
       }
@@ -1471,16 +1496,12 @@ export class Replayer {
         this.attachDocumentToIframe(mutation, parent);
         return;
       }
-      const afterAppend = (node: Node) => {
-        applyDialogToTopLevel(node);
-      };
       const target = buildNodeWithSN(mutation.node, {
         doc: targetDoc as Document,
         map: this.mirror.map,
         skipChild: true,
         hackCss: true,
         cache: this.cache,
-        afterAppend,
       }) as INode;
 
       // legacy data, we should not have -1 siblings any more
@@ -1527,11 +1548,6 @@ export class Replayer {
 
         parent.appendChild(target);
       }
-
-      /**
-       * target was added, execute apply dialogs
-       */
-      afterAppend(target);
 
       if (isIframeINode(target)) {
         const mutationInQueue = this.newDocumentQueue.find(
@@ -1635,8 +1651,17 @@ export class Replayer {
             try {
               ((target as Node) as Element).setAttribute(attributeName, value);
 
-              if (attributeName === 'rr_open_mode' && target.nodeName === 'DIALOG') {
-                applyDialogToTopLevel(target, mutation);
+              if (
+                attributeName === 'rr_open_mode' &&
+                target.nodeName === 'DIALOG'
+              ) {
+                // During fast-forwarding/seeking process dialog node is not attached to DOM
+                // store in treeIndex to show it when it's in DOM
+                if (useVirtualParent) {
+                  this.treeIndex.dialog(mutation);
+                } else {
+                  applyDialogToTopLevel(target, mutation);
+                }
               }
             } catch (error) {
               if (this.config.showWarning) {
@@ -1715,6 +1740,21 @@ export class Replayer {
     } catch (error) {
       // for safe
     }
+  }
+
+  private applyDialog(d: attributeMutation) {
+    const target = this.mirror.getNode(d.id);
+    if (!target) {
+      return this.debugNodeNotFound(d, d.id);
+    }
+
+    const value = d.attributes.open;
+    if (value === null) {
+      removeDialogFromTopLevel(target, d);
+      return;
+    }
+
+    applyDialogToTopLevel(target, d);
   }
 
   private legacy_resolveMissingNode(
@@ -1937,7 +1977,7 @@ export class Replayer {
     this.warn(`Has error on update canvas '${id}'`, d, error);
   }
 
-  private debugNodeNotFound(d: incrementalData, id: number) {
+  private debugNodeNotFound(d: incrementalData | attributeMutation, id: number) {
     /**
      * There maybe some valid scenes of node not being found.
      * Because DOM events are macrotask and MutationObserver callback
