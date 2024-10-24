@@ -33,6 +33,7 @@ import {
   scrollData,
   inputData,
   canvasMutationData,
+  attributeMutation,
   Mirror,
   ElementState,
   styleAttributeValue,
@@ -62,12 +63,17 @@ import {
   getNestedRule,
   getPositionsAndIndex,
 } from './virtual-styles';
-import { isUserInteraction, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
+import {
+  isUserInteraction,
+  SKIP_TIME_INTERVAL,
+  SKIP_TIME_THRESHOLD,
+} from './utils';
+import { applyDialogToTopLevel, removeDialogFromTopLevel } from './dialog';
 
 // Fix for Shopify's shorthand CSS properties (animation)
 // This is a PostHog way to fix it: https://github.com/PostHog/posthog/pull/22942
 const shopifyShorthandCSSFix =
-  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }'
+  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }';
 
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
@@ -172,7 +178,7 @@ export class Replayer {
     this.virtualStyleRulesMap = new Map();
 
     this.emitter.on(ReplayerEvents.Flush, () => {
-      const { scrollMap, inputMap } = this.treeIndex.flush();
+      const { scrollMap, inputMap, dialogMap } = this.treeIndex.flush();
 
       this.fragmentParentMap.forEach((parent, frag) =>
         this.restoreRealParent(frag, parent),
@@ -190,6 +196,9 @@ export class Replayer {
       }
       for (const d of inputMap.values()) {
         this.applyInput(d);
+      }
+      for (const d of dialogMap.values()) {
+        this.applyDialog(d);
       }
     });
     this.emitter.on(ReplayerEvents.PlayBack, () => {
@@ -287,9 +296,17 @@ export class Replayer {
   public setConfig(config: Partial<playerConfig>) {
     Object.keys(config).forEach((key) => {
       // If skipInactive was changed from false -> true, check if it can be skipped
-      if (key === 'skipInactive' && !this.config.skipInactive && config[key] && this.service.state.context.lastPlayedEvent) {
+      if (
+        key === 'skipInactive' &&
+        !this.config.skipInactive &&
+        config[key] &&
+        this.service.state.context.lastPlayedEvent
+      ) {
         this.config.skipInactive = true;
-        this.maybeSkipInactive(this.service.state.context.lastPlayedEvent, false);
+        this.maybeSkipInactive(
+          this.service.state.context.lastPlayedEvent,
+          false,
+        );
         return;
       }
 
@@ -540,20 +557,23 @@ export class Replayer {
 
           if (isUserInteraction(_event)) {
             hasFollowingInteraction = true;
-            if (
-              _eventDelay! - eventDelay! >
-              SKIP_TIME_THRESHOLD
-            ) {
+            if (_eventDelay! - eventDelay! > SKIP_TIME_THRESHOLD) {
               this.nextUserInteractionEvent = _event;
             }
             break;
           }
         }
 
-        if (!this.nextUserInteractionEvent && !hasFollowingInteraction && this.service.state.context.events.length) {
+        if (
+          !this.nextUserInteractionEvent &&
+          !hasFollowingInteraction &&
+          this.service.state.context.events.length
+        ) {
           // Was not able to find a next user interaction event.
           // Use last one
-          const lastEvent = this.service.state.context.events[this.service.state.context.events.length - 1];
+          const lastEvent = this.service.state.context.events[
+            this.service.state.context.events.length - 1
+          ];
           if (lastEvent.timestamp > event.timestamp) {
             this.nextUserInteractionEvent = lastEvent;
           }
@@ -565,7 +585,7 @@ export class Replayer {
 
           const payload = {
             // inactive period play time max 3 secs
-            speed: Math.round(skipTime / SKIP_TIME_INTERVAL)
+            speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
           };
           this.speedService.send({ type: 'FAST_FORWARD', payload });
           this.emitter.emit(ReplayerEvents.SkipStart, payload);
@@ -677,15 +697,19 @@ export class Replayer {
       );
     }
     this.legacy_missingNodeRetryMap = {};
-    const collected: AppendedIframe[] = [];
+    const collectedIframes: AppendedIframe[] = [];
+    const collectedDialogs = new Set<HTMLDialogElement>();
     this.mirror.map = rebuild(event.data.node, {
       doc: this.iframe.contentDocument,
       afterAppend: (builtNode) => {
-        this.collectIframeAndAttachDocument(collected, builtNode);
+        if (builtNode.nodeName === 'DIALOG') {
+          collectedDialogs.add((builtNode as unknown) as HTMLDialogElement);
+        }
+        this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
       cache: this.cache,
     })[1];
-    for (const { mutationInQueue, builtNode } of collected) {
+    for (const { mutationInQueue, builtNode } of collectedIframes) {
       this.attachDocumentToIframe(mutationInQueue, builtNode);
       this.newDocumentQueue = this.newDocumentQueue.filter(
         (m) => m !== mutationInQueue,
@@ -697,6 +721,8 @@ export class Replayer {
     }
     const { documentElement, head } = this.iframe.contentDocument;
     this.insertStyleRules(documentElement, head);
+
+    collectedDialogs.forEach((d) => applyDialogToTopLevel(d));
     if (!this.service.state.matches('playing')) {
       this.iframe.contentDocument
         .getElementsByTagName('html')[0]
@@ -734,7 +760,8 @@ export class Replayer {
     mutation: addedNodeMutation,
     iframeEl: HTMLIFrameElement,
   ) {
-    const collected: AppendedIframe[] = [];
+    const collectedIframes: AppendedIframe[] = [];
+    const collectedDialogs = new Set<HTMLDialogElement>();
     // If iframeEl is detached from dom, iframeEl.contentDocument is null.
     if (!iframeEl.contentDocument) {
       let parent = iframeEl.parentNode;
@@ -755,11 +782,14 @@ export class Replayer {
       hackCss: true,
       skipChild: false,
       afterAppend: (builtNode) => {
-        this.collectIframeAndAttachDocument(collected, builtNode);
+        if (builtNode.nodeName === 'DIALOG') {
+          collectedDialogs.add((builtNode as unknown) as HTMLDialogElement);
+        }
+        this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
       cache: this.cache,
     });
-    for (const { mutationInQueue, builtNode } of collected) {
+    for (const { mutationInQueue, builtNode } of collectedIframes) {
       this.attachDocumentToIframe(mutationInQueue, builtNode);
       this.newDocumentQueue = this.newDocumentQueue.filter(
         (m) => m !== mutationInQueue,
@@ -769,6 +799,8 @@ export class Replayer {
         this.insertStyleRules(documentElement, head);
       }
     }
+
+    collectedDialogs.forEach((d) => applyDialogToTopLevel(d));
   }
 
   private collectIframeAndAttachDocument(
@@ -1317,7 +1349,9 @@ export class Replayer {
       if (parent) {
         let realTarget = null;
         const realParent =
-          '__sn_atlas' in parent ? this.fragmentParentMap.get(parent) : undefined;
+          '__sn_atlas' in parent
+            ? this.fragmentParentMap.get(parent)
+            : undefined;
         if (realParent && realParent.contains(target)) {
           parent = realParent;
         } else if (this.fragmentParentMap.has(target)) {
@@ -1426,7 +1460,11 @@ export class Replayer {
             virtualParent.appendChild(parent.firstChild);
           }
           parent = virtualParent;
-        } else if (parentHasIframeChild && "tagName" in mutation.node && mutation.node.tagName === "style") {
+        } else if (
+          parentHasIframeChild &&
+          'tagName' in mutation.node &&
+          mutation.node.tagName === 'style'
+        ) {
           notVirtualStylesBecauseOfSiblingIframe.add(mutation.node.id);
         }
       }
@@ -1606,9 +1644,25 @@ export class Replayer {
           const value = mutation.attributes[attributeName];
           if (value === null) {
             ((target as Node) as Element).removeAttribute(attributeName);
+            if (attributeName === 'open') {
+              removeDialogFromTopLevel(target, mutation);
+            }
           } else if (typeof value === 'string') {
             try {
               ((target as Node) as Element).setAttribute(attributeName, value);
+
+              if (
+                attributeName === 'rr_open_mode' &&
+                target.nodeName === 'DIALOG'
+              ) {
+                // During fast-forwarding/seeking process dialog node is not attached to DOM
+                // store in treeIndex to show it when it's in DOM
+                if (useVirtualParent) {
+                  this.treeIndex.dialog(mutation);
+                } else {
+                  applyDialogToTopLevel(target, mutation);
+                }
+              }
             } catch (error) {
               if (this.config.showWarning) {
                 console.warn(
@@ -1686,6 +1740,21 @@ export class Replayer {
     } catch (error) {
       // for safe
     }
+  }
+
+  private applyDialog(d: attributeMutation) {
+    const target = this.mirror.getNode(d.id);
+    if (!target) {
+      return this.debugNodeNotFound(d, d.id);
+    }
+
+    const value = d.attributes.open;
+    if (value === null) {
+      removeDialogFromTopLevel(target, d);
+      return;
+    }
+
+    applyDialogToTopLevel(target, d);
   }
 
   private legacy_resolveMissingNode(
@@ -1908,7 +1977,7 @@ export class Replayer {
     this.warn(`Has error on update canvas '${id}'`, d, error);
   }
 
-  private debugNodeNotFound(d: incrementalData, id: number) {
+  private debugNodeNotFound(d: incrementalData | attributeMutation, id: number) {
     /**
      * There maybe some valid scenes of node not being found.
      * Because DOM events are macrotask and MutationObserver callback

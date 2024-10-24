@@ -540,6 +540,14 @@ export default class MutationBuffer {
           );
         }
 
+        if (m.attributeName === 'open' && tagName === 'dialog') {
+          if (target.matches('dialog:modal')) {
+            item.attributes.rr_open_mode = 'modal';
+          } else {
+            item.attributes.rr_open_mode = 'non-modal';
+          }
+        }
+
         if (tagName === 'img') {
           const needsMasking = needMaskingText(
             m.target,

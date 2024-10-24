@@ -331,6 +331,7 @@ export class TreeIndex {
   private removeIdSet!: Set<number>;
   private scrollMap!: Map<number, scrollData>;
   private inputMap!: Map<number, inputData>;
+  private dialogMap!: Map<number, attributeMutation>;
 
   constructor() {
     this.reset();
@@ -422,10 +423,15 @@ export class TreeIndex {
     this.inputMap.set(d.id, d);
   }
 
+  public dialog(d: attributeMutation) {
+    this.dialogMap.set(d.id, d);
+  }
+
   public flush(): {
     mutationData: mutationData;
     scrollMap: TreeIndex['scrollMap'];
     inputMap: TreeIndex['inputMap'];
+    dialogMap: TreeIndex['dialogMap'];
   } {
     const {
       tree,
@@ -481,6 +487,7 @@ export class TreeIndex {
 
     const scrollMap = new Map(this.scrollMap);
     const inputMap = new Map(this.inputMap);
+    const dialogMap = new Map(this.dialogMap);
 
     this.reset();
 
@@ -488,6 +495,7 @@ export class TreeIndex {
       mutationData: batchMutationData,
       scrollMap,
       inputMap,
+      dialogMap,
     };
   }
 
@@ -500,6 +508,7 @@ export class TreeIndex {
     this.removeIdSet = new Set();
     this.scrollMap = new Map();
     this.inputMap = new Map();
+    this.dialogMap = new Map();
   }
 
   public idRemoved(id: number): boolean {
