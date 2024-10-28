@@ -9,7 +9,6 @@ import {
   MaskImageFn,
 } from 'rrweb-snapshot';
 import { PackFn, UnpackFn } from './packer/base';
-import { FontFaceDescriptors } from 'css-font-loading-module';
 import { IframeManager } from './record/iframe-manager';
 import { ShadowDomManager } from './record/shadow-dom-manager';
 import type { Replayer } from './replay';
