@@ -2,7 +2,6 @@ import { createMachine, interpret, assign, StateMachine } from '@xstate/fsm';
 import {
   playerConfig,
   eventWithTime,
-  actionWithDelay,
   ReplayerEvents,
   EventType,
   Emitter,
@@ -187,7 +186,6 @@ export function createPlayerService(
           }
 
           const syncEvents = new Array<eventWithTime>();
-          const actions = new Array<actionWithDelay>();
           for (const event of neededEvents) {
             /* process all sync events,
               otherwise skipping won't work when user is calling "play" with offset */
@@ -195,7 +193,7 @@ export function createPlayerService(
               syncEvents.push(event);
             } else {
               const castFn = getCastFn(event, false);
-              actions.push({
+              timer.addAction({
                 doAction: () => {
                   castFn();
                 },
@@ -205,7 +203,6 @@ export function createPlayerService(
           }
           applyEventsSynchronously(syncEvents);
           emitter.emit(ReplayerEvents.Flush);
-          timer.addActions(actions);
           timer.start();
         },
         pause(ctx) {
@@ -219,7 +216,6 @@ export function createPlayerService(
         }),
         startLive: assign({
           baselineTime: (ctx, event) => {
-            ctx.timer.toggleLiveMode(true);
             ctx.timer.start();
             if (event.type === 'TO_LIVE' && event.payload.baselineTime) {
               return event.payload.baselineTime;

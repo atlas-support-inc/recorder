@@ -62,12 +62,16 @@ import {
   getNestedRule,
   getPositionsAndIndex,
 } from './virtual-styles';
-import { isUserInteraction, SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
+import {
+  isUserInteraction,
+  SKIP_TIME_INTERVAL,
+  SKIP_TIME_THRESHOLD,
+} from './utils';
 
 // Fix for Shopify's shorthand CSS properties (animation)
 // This is a PostHog way to fix it: https://github.com/PostHog/posthog/pull/22942
 const shopifyShorthandCSSFix =
-  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }'
+  '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }';
 
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
@@ -197,7 +201,9 @@ export class Replayer {
       this.mirror.reset();
     });
 
-    const timer = new Timer([], config?.speed || defaultConfig.speed);
+    const timer = new Timer([], {
+      speed: config?.speed || defaultConfig.speed,
+    });
     this.service = createPlayerService(
       {
         events: events
@@ -287,9 +293,17 @@ export class Replayer {
   public setConfig(config: Partial<playerConfig>) {
     Object.keys(config).forEach((key) => {
       // If skipInactive was changed from false -> true, check if it can be skipped
-      if (key === 'skipInactive' && !this.config.skipInactive && config[key] && this.service.state.context.lastPlayedEvent) {
+      if (
+        key === 'skipInactive' &&
+        !this.config.skipInactive &&
+        config[key] &&
+        this.service.state.context.lastPlayedEvent
+      ) {
         this.config.skipInactive = true;
-        this.maybeSkipInactive(this.service.state.context.lastPlayedEvent, false);
+        this.maybeSkipInactive(
+          this.service.state.context.lastPlayedEvent,
+          false,
+        );
         return;
       }
 
@@ -540,21 +554,27 @@ export class Replayer {
 
           if (isUserInteraction(_event)) {
             hasFollowingInteraction = true;
-            if (
-              _eventDelay! - eventDelay! >
-              SKIP_TIME_THRESHOLD
-            ) {
+            if (_eventDelay! - eventDelay! > SKIP_TIME_THRESHOLD) {
               this.nextUserInteractionEvent = _event;
             }
             break;
           }
         }
 
-        if (!this.nextUserInteractionEvent && !hasFollowingInteraction && this.service.state.context.events.length) {
+        if (
+          !this.nextUserInteractionEvent &&
+          !hasFollowingInteraction &&
+          this.service.state.context.events.length
+        ) {
           // Was not able to find a next user interaction event.
           // Use last one
-          const lastEvent = this.service.state.context.events[this.service.state.context.events.length - 1];
-          if (lastEvent.timestamp > event.timestamp) {
+          const lastEvent = this.service.state.context.events[
+            this.service.state.context.events.length - 1
+          ];
+          if (
+            lastEvent.timestamp > event.timestamp &&
+            lastEvent.timestamp - event.timestamp > SKIP_TIME_THRESHOLD
+          ) {
             this.nextUserInteractionEvent = lastEvent;
           }
         }
@@ -565,7 +585,7 @@ export class Replayer {
 
           const payload = {
             // inactive period play time max 3 secs
-            speed: Math.round(skipTime / SKIP_TIME_INTERVAL)
+            speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
           };
           this.speedService.send({ type: 'FAST_FORWARD', payload });
           this.emitter.emit(ReplayerEvents.SkipStart, payload);
@@ -633,8 +653,11 @@ export class Replayer {
       this.service.send({ type: 'CAST_EVENT', payload: { event } });
 
       // events are kept sorted by timestamp, check if this is the last event
-      let last_index = this.service.state.context.events.length - 1;
-      if (event === this.service.state.context.events[last_index]) {
+      const last_index = this.service.state.context.events.length - 1;
+      if (
+        !this.config.liveMode &&
+        event === this.service.state.context.events[last_index]
+      ) {
         const finish = () => {
           if (last_index < this.service.state.context.events.length - 1) {
             // more events have been added since the setTimeout
@@ -644,18 +667,16 @@ export class Replayer {
           this.service.send('END');
           this.emitter.emit(ReplayerEvents.Finish);
         };
+        let finish_buffer = 50; // allow for checking whether new events aren't just about to be loaded in
         if (
           event.type === EventType.IncrementalSnapshot &&
           event.data.source === IncrementalSource.MouseMove &&
           event.data.positions.length
         ) {
-          // defer finish event if the last event is a mouse move
-          setTimeout(() => {
-            finish();
-          }, Math.max(0, -event.data.positions[0].timeOffset + 50)); // Add 50 to make sure the timer would check the last mousemove event. Otherwise, the timer may be stopped by the service before checking the last event.
-        } else {
-          finish();
+          // extend finish event if the last event is a mouse move so that the timer isn't stopped by the service before checking the last event
+          finish_buffer += Math.max(0, -event.data.positions[0].timeOffset);
         }
+        setTimeout(finish, finish_buffer);
       }
 
       this.emitter.emit(ReplayerEvents.EventCast, event);
@@ -1317,7 +1338,9 @@ export class Replayer {
       if (parent) {
         let realTarget = null;
         const realParent =
-          '__sn_atlas' in parent ? this.fragmentParentMap.get(parent) : undefined;
+          '__sn_atlas' in parent
+            ? this.fragmentParentMap.get(parent)
+            : undefined;
         if (realParent && realParent.contains(target)) {
           parent = realParent;
         } else if (this.fragmentParentMap.has(target)) {
@@ -1426,7 +1449,11 @@ export class Replayer {
             virtualParent.appendChild(parent.firstChild);
           }
           parent = virtualParent;
-        } else if (parentHasIframeChild && "tagName" in mutation.node && mutation.node.tagName === "style") {
+        } else if (
+          parentHasIframeChild &&
+          'tagName' in mutation.node &&
+          mutation.node.tagName === 'style'
+        ) {
           notVirtualStylesBecauseOfSiblingIframe.add(mutation.node.id);
         }
       }
