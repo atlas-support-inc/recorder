@@ -206,7 +206,9 @@ export class Replayer {
       this.mirror.reset();
     });
 
-    const timer = new Timer([], config?.speed || defaultConfig.speed);
+    const timer = new Timer([], {
+      speed: config?.speed || defaultConfig.speed,
+    });
     this.service = createPlayerService(
       {
         events: events
@@ -574,7 +576,10 @@ export class Replayer {
           const lastEvent = this.service.state.context.events[
             this.service.state.context.events.length - 1
           ];
-          if (lastEvent.timestamp > event.timestamp) {
+          if (
+            lastEvent.timestamp > event.timestamp &&
+            lastEvent.timestamp - event.timestamp > SKIP_TIME_THRESHOLD
+          ) {
             this.nextUserInteractionEvent = lastEvent;
           }
         }
@@ -653,8 +658,11 @@ export class Replayer {
       this.service.send({ type: 'CAST_EVENT', payload: { event } });
 
       // events are kept sorted by timestamp, check if this is the last event
-      let last_index = this.service.state.context.events.length - 1;
-      if (event === this.service.state.context.events[last_index]) {
+      const last_index = this.service.state.context.events.length - 1;
+      if (
+        !this.config.liveMode &&
+        event === this.service.state.context.events[last_index]
+      ) {
         const finish = () => {
           if (last_index < this.service.state.context.events.length - 1) {
             // more events have been added since the setTimeout
@@ -664,18 +672,16 @@ export class Replayer {
           this.service.send('END');
           this.emitter.emit(ReplayerEvents.Finish);
         };
+        let finish_buffer = 50; // allow for checking whether new events aren't just about to be loaded in
         if (
           event.type === EventType.IncrementalSnapshot &&
           event.data.source === IncrementalSource.MouseMove &&
           event.data.positions.length
         ) {
-          // defer finish event if the last event is a mouse move
-          setTimeout(() => {
-            finish();
-          }, Math.max(0, -event.data.positions[0].timeOffset + 50)); // Add 50 to make sure the timer would check the last mousemove event. Otherwise, the timer may be stopped by the service before checking the last event.
-        } else {
-          finish();
+          // extend finish event if the last event is a mouse move so that the timer isn't stopped by the service before checking the last event
+          finish_buffer += Math.max(0, -event.data.positions[0].timeOffset);
         }
+        setTimeout(finish, finish_buffer);
       }
 
       this.emitter.emit(ReplayerEvents.EventCast, event);
@@ -1977,7 +1983,10 @@ export class Replayer {
     this.warn(`Has error on update canvas '${id}'`, d, error);
   }
 
-  private debugNodeNotFound(d: incrementalData | attributeMutation, id: number) {
+  private debugNodeNotFound(
+    d: incrementalData | attributeMutation,
+    id: number,
+  ) {
     /**
      * There maybe some valid scenes of node not being found.
      * Because DOM events are macrotask and MutationObserver callback

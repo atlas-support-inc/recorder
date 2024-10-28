@@ -8,7 +8,7 @@ import {
   MaskTextFn,
   MaskImageFn,
 } from 'rrweb-snapshot';
-import { FontFaceDescriptors, FontFaceSet } from 'css-font-loading-module';
+import { FontFaceSet } from 'css-font-loading-module';
 import {
   throttle,
   on,
