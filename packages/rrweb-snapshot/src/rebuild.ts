@@ -258,6 +258,11 @@ function buildNode(
                 break;
               default:
             }
+          } else if (name === 'rr_open_mode') {
+            (node as HTMLDialogElement).setAttribute(
+              'rr_open_mode',
+              value as string,
+            ); // keep this attribute for rrweb to trigger showModal
           }
         }
       }
