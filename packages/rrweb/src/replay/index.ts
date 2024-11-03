@@ -542,24 +542,24 @@ export class Replayer {
   }
 
   private maybeSkipInactive(event: eventWithTime, isSync: boolean) {
+    if (isSync) return; // do not check skip in sync
+
     if (event === this.nextUserInteractionEvent) {
       this.nextUserInteractionEvent = null;
       this.backToNormal();
     }
     if (this.config.skipInactive) {
       if (!this.nextUserInteractionEvent) {
+        const eventIndex = this.service.state.context.events.indexOf(event);
+        if (eventIndex === -1) return;
+        
         let hasFollowingInteraction = false;
-        for (const _event of this.service.state.context.events) {
-          if (_event.timestamp! <= event.timestamp!) {
-            continue;
-          }
-
-          const _eventDelay = isSync ? _event.timestamp : _event.delay;
-          const eventDelay = isSync ? event.timestamp : event.delay;
+        for (let i = eventIndex; i < this.service.state.context.events.length; i++) {
+          const _event = this.service.state.context.events[i];
 
           if (isUserInteraction(_event)) {
             hasFollowingInteraction = true;
-            if (_eventDelay! - eventDelay! > SKIP_TIME_THRESHOLD) {
+            if (_event.delay! - event.delay! > SKIP_TIME_THRESHOLD) {
               this.nextUserInteractionEvent = _event;
             }
             break;
