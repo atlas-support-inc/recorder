@@ -546,60 +546,56 @@ export class Replayer {
       this.nextUserInteractionEvent = null;
       this.backToNormal();
     }
+    if (this.config.skipInactive) {
+      if (!this.nextUserInteractionEvent) {
+        let hasFollowingInteraction = false;
+        for (const _event of this.service.state.context.events) {
+          if (_event.timestamp! <= event.timestamp!) {
+            continue;
+          }
 
-    if (this.nextUserInteractionEvent) return;
+          const _eventDelay = isSync ? _event.timestamp : _event.delay;
+          const eventDelay = isSync ? event.timestamp : event.delay;
 
-    const allEvents = this.service.state.context.events;
+          if (isUserInteraction(_event)) {
+            hasFollowingInteraction = true;
+            if (_eventDelay! - eventDelay! > SKIP_TIME_THRESHOLD) {
+              this.nextUserInteractionEvent = _event;
+            }
+            break;
+          }
+        }
 
-    const eventIndex = this.service.state.context.events.indexOf(event);
-    if (eventIndex === -1 || eventIndex === allEvents.length - 1) {
-      // Reset if out of scope
-      this.backToNormal();
-      return;
-    }
-    
-    let hasFollowingInteraction = false;
-    for (let i = eventIndex; i < allEvents.length; i++) {
-      const _event = allEvents[i];
+        if (
+          !this.nextUserInteractionEvent &&
+          !hasFollowingInteraction &&
+          this.service.state.context.events.length
+        ) {
+          // Was not able to find a next user interaction event.
+          // Use last one
+          const lastEvent = this.service.state.context.events[
+            this.service.state.context.events.length - 1
+          ];
+          if (
+            lastEvent.timestamp > event.timestamp &&
+            lastEvent.timestamp - event.timestamp > SKIP_TIME_THRESHOLD
+          ) {
+            this.nextUserInteractionEvent = lastEvent;
+          }
+        }
 
-      if (!isUserInteraction(_event)) continue;
+        if (this.nextUserInteractionEvent) {
+          const skipTime =
+            this.nextUserInteractionEvent.timestamp - event.timestamp;
 
-      hasFollowingInteraction = true;
-
-      const timeout = isSync ? _event.timestamp - event.timestamp : _event.delay! - event.delay!;
-      if (timeout > SKIP_TIME_THRESHOLD) {
-        this.nextUserInteractionEvent = _event;
+          const payload = {
+            // inactive period play time max 3 secs
+            speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
+          };
+          this.speedService.send({ type: 'FAST_FORWARD', payload });
+          this.emitter.emit(ReplayerEvents.SkipStart, payload);
+        }
       }
-
-      break;
-    }
-
-    if (
-      !this.nextUserInteractionEvent &&
-      !hasFollowingInteraction &&
-      allEvents.length
-    ) {
-      // Was not able to find a next user interaction event.
-      // Use last one
-      const lastEvent = allEvents[allEvents.length - 1];
-      if (
-        lastEvent.timestamp > event.timestamp &&
-        lastEvent.timestamp - event.timestamp > SKIP_TIME_THRESHOLD
-      ) {
-        this.nextUserInteractionEvent = lastEvent;
-      }
-    }
-
-    if (this.nextUserInteractionEvent) {
-      const skipTime =
-        this.nextUserInteractionEvent.timestamp - event.timestamp;
-
-      const payload = {
-        // inactive period play time max 3 secs
-        speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
-      };
-      this.speedService.send({ type: 'FAST_FORWARD', payload });
-      this.emitter.emit(ReplayerEvents.SkipStart, payload);
     }
   }
 
