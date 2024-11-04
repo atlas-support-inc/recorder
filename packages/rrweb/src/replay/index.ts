@@ -499,7 +499,28 @@ export class Replayer {
   }
 
   private applyEventsSynchronously(events: Array<eventWithTime>) {
-    for (const event of events) {
+    let lastSnapshotIndex = -1;
+    let lastMetaIndex = -1;
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (!~lastSnapshotIndex && events[i].type === EventType.FullSnapshot) {
+        lastSnapshotIndex = i;
+      }
+      if (!~lastMetaIndex && events[i].type === EventType.Meta) {
+        lastMetaIndex = i;
+      }
+      if (~lastSnapshotIndex && ~lastMetaIndex) {
+        break;
+      }
+    }
+
+    let index = 0;
+    if (~lastMetaIndex && lastMetaIndex < lastSnapshotIndex) {
+      this.getCastFn(events[lastMetaIndex], true);
+    }
+    if (~lastSnapshotIndex) index = lastSnapshotIndex;
+
+    for (; index < events.length; index++) {
+      const event = events[index];
       switch (event.type) {
         case EventType.DomContentLoaded:
         case EventType.Load:
