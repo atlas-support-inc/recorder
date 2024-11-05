@@ -542,14 +542,18 @@ export class Replayer {
     this.touchActive = null;
   }
 
-  private applyEventsAsynchronously(events: Array<eventWithTime>, done: () => void) {
+  private applyEventsAsynchronously(
+    events: Array<eventWithTime>,
+    done: () => void,
+  ) {
     const allEvents = [...events];
     const applyEvent = this.applyEvent.bind(this);
     const applyTouchAndMouse = this.applyTouchAndMouse.bind(this);
+
     function processNextEvent(deadline: IdleDeadline) {
       while (deadline.timeRemaining() > 0 && allEvents.length > 0) {
         const event = allEvents.shift();
-        applyEvent(event, false);
+        applyEvent(event);
       }
 
       if (allEvents.length > 0) {
@@ -574,9 +578,13 @@ export class Replayer {
       if (!this.nextUserInteractionEvent) {
         const eventIndex = this.service.state.context.events.indexOf(event);
         if (eventIndex === -1) return;
-        
+
         let hasFollowingInteraction = false;
-        for (let i = eventIndex; i < this.service.state.context.events.length; i++) {
+        for (
+          let i = eventIndex;
+          i < this.service.state.context.events.length;
+          i++
+        ) {
           const _event = this.service.state.context.events[i];
 
           if (isUserInteraction(_event)) {

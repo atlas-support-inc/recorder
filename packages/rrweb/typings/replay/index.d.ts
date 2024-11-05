@@ -44,6 +44,8 @@ export declare class Replayer {
     resetCache(): void;
     private setupDom;
     private handleResize;
+    private applyEvent;
+    private applyTouchAndMouse;
     private applyEventsAsynchronously;
     private maybeSkipInactive;
     private getCastFn;
