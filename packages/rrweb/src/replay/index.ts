@@ -167,7 +167,7 @@ export class Replayer {
 
     this.handleResize = this.handleResize.bind(this);
     this.getCastFn = this.getCastFn.bind(this);
-    this.applyEventsSynchronously = this.applyEventsSynchronously.bind(this);
+    this.applyEventsAsynchronously = this.applyEventsAsynchronously.bind(this);
     this.emitter.on(ReplayerEvents.Resize, this.handleResize as Handler);
 
     this.setupDom();
@@ -226,7 +226,7 @@ export class Replayer {
       },
       {
         getCastFn: this.getCastFn,
-        applyEventsSynchronously: this.applyEventsSynchronously,
+        applyEventsAsynchronously: this.applyEventsAsynchronously,
         emitter: this.emitter,
       },
     );
@@ -498,31 +498,32 @@ export class Replayer {
     }
   }
 
-  private applyEventsSynchronously(events: Array<eventWithTime>) {
-    for (const event of events) {
-      switch (event.type) {
-        case EventType.DomContentLoaded:
-        case EventType.Load:
-        case EventType.Custom:
-          continue;
-        case EventType.FullSnapshot:
-        case EventType.Meta:
-        case EventType.Plugin:
-          break;
-        case EventType.IncrementalSnapshot:
-          switch (event.data.source) {
-            case IncrementalSource.MediaInteraction:
-              continue;
-            default:
-              break;
-          }
-          break;
-        default:
-          break;
-      }
-      const castFn = this.getCastFn(event, true);
-      castFn();
+  private applyEvent(event: eventWithTime) {
+    switch (event.type) {
+      case EventType.DomContentLoaded:
+      case EventType.Load:
+      case EventType.Custom:
+        return;
+      case EventType.FullSnapshot:
+      case EventType.Meta:
+      case EventType.Plugin:
+        break;
+      case EventType.IncrementalSnapshot:
+        switch (event.data.source) {
+          case IncrementalSource.MediaInteraction:
+            return;
+          default:
+            break;
+        }
+        break;
+      default:
+        break;
     }
+    const castFn = this.getCastFn(event, true);
+    castFn();
+  }
+
+  private applyTouchAndMouse() {
     if (this.mousePos) {
       this.moveAndHover(
         this.mousePos.x,
@@ -539,6 +540,27 @@ export class Replayer {
       this.mouse.classList.remove('touch-active');
     }
     this.touchActive = null;
+  }
+
+  private applyEventsAsynchronously(events: Array<eventWithTime>, done: () => void) {
+    const allEvents = [...events];
+    const applyEvent = this.applyEvent.bind(this);
+    const applyTouchAndMouse = this.applyTouchAndMouse.bind(this);
+    function processNextEvent(deadline: IdleDeadline) {
+      while (deadline.timeRemaining() > 0 && allEvents.length > 0) {
+        const event = allEvents.shift();
+        applyEvent(event, false);
+      }
+
+      if (allEvents.length > 0) {
+        requestIdleCallback(processNextEvent);
+      } else {
+        applyTouchAndMouse();
+        done();
+      }
+    }
+
+    requestIdleCallback(processNextEvent);
   }
 
   private maybeSkipInactive(event: eventWithTime, isSync: boolean) {

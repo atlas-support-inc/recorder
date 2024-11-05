@@ -75,12 +75,12 @@ export function discardPriorSnapshots(
 
 type PlayerAssets = {
   emitter: Emitter;
-  applyEventsSynchronously(events: Array<eventWithTime>): void;
+  applyEventsAsynchronously(events: Array<eventWithTime>, done: () => void): void;
   getCastFn(event: eventWithTime, isSync: boolean): () => void;
 };
 export function createPlayerService(
   context: PlayerContext,
-  { getCastFn, applyEventsSynchronously, emitter }: PlayerAssets,
+  { getCastFn, applyEventsAsynchronously, emitter }: PlayerAssets,
 ) {
   const playerMachine = createMachine<PlayerContext, PlayerEvent, PlayerState>(
     {
@@ -201,9 +201,10 @@ export function createPlayerService(
               });
             }
           }
-          applyEventsSynchronously(syncEvents);
-          emitter.emit(ReplayerEvents.Flush);
-          timer.start();
+          applyEventsAsynchronously(syncEvents, () => {
+            emitter.emit(ReplayerEvents.Flush);
+            timer.start();
+          });
         },
         pause(ctx) {
           ctx.timer.clear();
