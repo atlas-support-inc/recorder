@@ -75,7 +75,10 @@ export function discardPriorSnapshots(
 
 type PlayerAssets = {
   emitter: Emitter;
-  applyEventsAsynchronously(events: Array<eventWithTime>, done: () => void): void;
+  applyEventsAsynchronously(
+    events: Array<eventWithTime>,
+    done: () => void,
+  ): void;
   getCastFn(event: eventWithTime, isSync: boolean): () => void;
 };
 export function createPlayerService(

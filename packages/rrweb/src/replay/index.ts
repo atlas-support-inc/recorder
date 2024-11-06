@@ -51,6 +51,7 @@ import {
   isIframeINode,
   getBaseDimension,
   hasShadowRoot,
+  asyncLoop,
 } from '../utils';
 import getInjectStyleRules from './styles/inject-style';
 import './styles/style.css';
@@ -139,6 +140,8 @@ export class Replayer {
 
   private mousePos: mouseMovePos | null = null;
   private touchActive: boolean | null = null;
+
+  private lastApplyCancelFn?: () => void;
 
   constructor(
     events: Array<eventWithTime | string>,
@@ -546,25 +549,16 @@ export class Replayer {
     events: Array<eventWithTime>,
     done: () => void,
   ) {
-    const allEvents = [...events];
-    const applyEvent = this.applyEvent.bind(this);
-    const applyTouchAndMouse = this.applyTouchAndMouse.bind(this);
+    this.lastApplyCancelFn?.();
 
-    function processNextEvent(deadline: IdleDeadline) {
-      while (deadline.timeRemaining() > 0 && allEvents.length > 0) {
-        const event = allEvents.shift();
-        applyEvent(event);
-      }
-
-      if (allEvents.length > 0) {
-        requestIdleCallback(processNextEvent);
-      } else {
-        applyTouchAndMouse();
+    this.lastApplyCancelFn = asyncLoop(
+      events,
+      (event) => this.applyEvent(event),
+      () => {
+        this.applyTouchAndMouse();
         done();
-      }
-    }
-
-    requestIdleCallback(processNextEvent);
+      },
+    );
   }
 
   private maybeSkipInactive(event: eventWithTime, isSync: boolean) {

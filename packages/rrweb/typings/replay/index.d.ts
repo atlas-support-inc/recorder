@@ -26,6 +26,7 @@ export declare class Replayer {
     private newDocumentQueue;
     private mousePos;
     private touchActive;
+    private lastApplyCancelFn?;
     constructor(events: Array<eventWithTime | string>, config?: Partial<playerConfig>);
     on(event: string, handler: Handler): this;
     off(event: string, handler: Handler): this;

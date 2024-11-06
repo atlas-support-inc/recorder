@@ -594,7 +594,8 @@ export function isIframeINode(
 ): node is HTMLIFrameINode {
   if ('__sn_atlas' in node) {
     return (
-      node.__sn_atlas.type === NodeType.Element && node.__sn_atlas.tagName === 'iframe'
+      node.__sn_atlas.type === NodeType.Element &&
+      node.__sn_atlas.tagName === 'iframe'
     );
   }
   // node can be document fragment when using the virtual parent feature
@@ -635,4 +636,65 @@ export function hasShadowRoot<T extends Node>(
   n: T,
 ): n is T & { shadowRoot: ShadowRoot } {
   return Boolean(((n as unknown) as Element)?.shadowRoot);
+}
+
+const asyncLoopMaxFreezeTime = 30; // Allow browser to hang for 30ms (make it reduce frames twice)
+
+export function asyncLoop<T>(
+  items: T[],
+  fn: (item: T) => void,
+  done: () => void,
+): () => void {
+  const all = [...items];
+
+  // Try the most advanced way first
+  if ('requestIdleCallback' in window) {
+    let idleCallback: number;
+    const cancel = () =>
+      typeof idleCallback === 'number' && cancelIdleCallback(idleCallback);
+    const processNextEvent: IdleRequestCallback = (deadline) => {
+      while (deadline.timeRemaining() > 0) {
+        const item = all.shift();
+        if (!item) break;
+        fn(item);
+      }
+
+      if (all.length > 0) {
+        idleCallback = requestIdleCallback(processNextEvent);
+      } else {
+        done();
+      }
+    };
+
+    idleCallback = requestIdleCallback(processNextEvent);
+
+    return cancel;
+  }
+
+  // Prefer requestAnimationFrame or fallback to setTimeout otherwise
+  let nextCallbackId: number;
+  const [nextFn, cancelFn] =
+    'requestAnimationFrame' in window && requestAnimationFrame
+      ? [requestAnimationFrame, cancelAnimationFrame]
+      : [setTimeout, clearTimeout];
+  const cancel = () =>
+    typeof nextCallbackId === 'number' && cancelFn(nextCallbackId);
+  const processNextEvent = () => {
+    const start = performance.now();
+    while (performance.now() - start < asyncLoopMaxFreezeTime) {
+      const item = all.shift();
+      if (!item) break;
+      fn(item);
+    }
+
+    if (all.length > 0) {
+      nextCallbackId = nextFn(processNextEvent);
+    } else {
+      done();
+    }
+  };
+
+  nextCallbackId = nextFn(processNextEvent);
+
+  return cancel;
 }
