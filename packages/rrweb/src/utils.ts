@@ -642,10 +642,11 @@ const asyncLoopMaxFreezeTime = 30; // Allow browser to hang for 30ms (make it re
 
 export function asyncLoop<T>(
   items: T[],
-  fn: (item: T) => void,
+  fn: (item: T, index: number) => void,
   done: () => void,
 ): () => void {
   const all = [...items];
+  let index = 0;
 
   // Try the most advanced way first
   if ('requestIdleCallback' in window) {
@@ -653,13 +654,12 @@ export function asyncLoop<T>(
     const cancel = () =>
       typeof idleCallback === 'number' && cancelIdleCallback(idleCallback);
     const processNextEvent: IdleRequestCallback = (deadline) => {
-      while (deadline.timeRemaining() > 0) {
-        const item = all.shift();
-        if (!item) break;
-        fn(item);
+      while (index < all.length && deadline.timeRemaining() > 0) {
+        fn(all[index], index);
+        index++;
       }
 
-      if (all.length > 0) {
+      if (index < all.length) {
         idleCallback = requestIdleCallback(processNextEvent);
       } else {
         done();
@@ -681,13 +681,12 @@ export function asyncLoop<T>(
     typeof nextCallbackId === 'number' && cancelFn(nextCallbackId);
   const processNextEvent = () => {
     const start = performance.now();
-    while (performance.now() - start < asyncLoopMaxFreezeTime) {
-      const item = all.shift();
-      if (!item) break;
-      fn(item);
+    while (index < all.length && performance.now() - start < asyncLoopMaxFreezeTime) {
+      fn(all[index], index);
+      index++;
     }
 
-    if (all.length > 0) {
+    if (index < all.length) {
       nextCallbackId = nextFn(processNextEvent);
     } else {
       done();

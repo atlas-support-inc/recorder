@@ -549,13 +549,25 @@ export class Replayer {
     events: Array<eventWithTime>,
     done: () => void,
   ) {
-    this.lastApplyCancelFn?.();
+    if (this.lastApplyCancelFn) {
+      this.lastApplyCancelFn();
+      this.emitter.emit(ReplayerEvents.LongPatchEnd);
+    }
+
+    const start = performance.now();
+    let long = false;
 
     this.lastApplyCancelFn = asyncLoop(
       events,
-      (event) => this.applyEvent(event),
+      (event, index) => {
+        this.applyEvent(event);
+        if (!long && (performance.now() - start > 150) && index < events.length / 2) {
+          this.emitter.emit(ReplayerEvents.LongPatchStart);
+        }
+      },
       () => {
         this.applyTouchAndMouse();
+        this.emitter.emit(ReplayerEvents.LongPatchEnd);
         done();
       },
     );

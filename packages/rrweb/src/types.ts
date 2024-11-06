@@ -611,6 +611,8 @@ export enum ReplayerEvents {
   LoadStylesheetEnd = 'load-stylesheet-end',
   SkipStart = 'skip-start',
   SkipEnd = 'skip-end',
+  LongPatchStart = 'long-patch-start',
+  LongPatchEnd = 'long-patch-end',
   MouseInteraction = 'mouse-interaction',
   EventCast = 'event-cast',
   CustomEvent = 'custom-event',
