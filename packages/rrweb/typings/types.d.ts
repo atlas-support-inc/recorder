@@ -408,6 +408,7 @@ export declare type playerConfig = {
     root: Element;
     loadTimeout: number;
     skipInactive: boolean;
+    totalSessionLength?: number;
     showWarning: boolean;
     showDebug: boolean;
     blockClass: string;
@@ -440,6 +441,7 @@ export declare type missingNodeMap = {
 export declare type actionWithDelay = {
     doAction: () => void;
     delay: number;
+    isUserInteraction: boolean;
 };
 export declare type Handler = (event?: unknown) => void;
 export declare type Emitter = {

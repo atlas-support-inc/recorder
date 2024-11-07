@@ -13,7 +13,6 @@ export declare class Replayer {
     private mouseTail;
     private tailPositions;
     private emitter;
-    private nextUserInteractionEvent;
     private legacy_missingNodeRetryMap;
     private treeIndex;
     private fragmentParentMap;
@@ -48,7 +47,7 @@ export declare class Replayer {
     private applyEvent;
     private applyTouchAndMouse;
     private applyEventsAsynchronously;
-    private maybeSkipInactive;
+    private startSkipping;
     private getCastFn;
     private rebuildFullSnapshot;
     private insertStyleRules;

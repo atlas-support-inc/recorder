@@ -40,6 +40,7 @@ import {
   styleValueWithPriority,
   mouseMovePos,
   IWindow,
+  actionWithDelay,
 } from '../types';
 import {
   createMirror,
@@ -65,7 +66,6 @@ import {
   getPositionsAndIndex,
 } from './virtual-styles';
 import {
-  isUserInteraction,
   SKIP_TIME_INTERVAL,
   SKIP_TIME_THRESHOLD,
 } from './utils';
@@ -81,6 +81,8 @@ const shopifyShorthandCSSFix =
 const mitt = (mittProxy as any).default || mittProxy;
 
 const REPLAY_CONSOLE_PREFIX = '[replayer]';
+
+const SKIP_END_BUFFER = 1e3; // 1 second before user activity to exit skipping
 
 const defaultMouseTailConfig = {
   duration: 500,
@@ -115,8 +117,6 @@ export class Replayer {
   private tailPositions: Array<{ x: number; y: number }> = [];
 
   private emitter: Emitter = mitt();
-
-  private nextUserInteractionEvent: eventWithTime | null;
 
   // tslint:disable-next-line: variable-name
   private legacy_missingNodeRetryMap: missingNodeMap = {};
@@ -211,6 +211,41 @@ export class Replayer {
 
     const timer = new Timer([], {
       speed: config?.speed || defaultConfig.speed,
+      onTick: (actions, nextActions) => {
+        if (!this.config.skipInactive) return;
+
+        const allActions = actions.concat(nextActions);
+        const skipping = this.speedService.state.matches('skipping');
+        if (skipping) {
+          // if has user interaction in the time buffer -> backToNormal
+          for (let i = 0; i < allActions.length; i++) {
+            // Quit the loop if next action has delay over the limit of buffer
+            if (allActions[i].delay - this.timer.timeOffset > SKIP_END_BUFFER)
+              break;
+            if (allActions[i].isUserInteraction) {
+              this.backToNormal();
+              return;
+            }
+          }
+          return;
+        }
+
+        let nextUserInteraction: actionWithDelay | null = null;
+        for (let i = 0; i < allActions.length; i++) {
+          if (allActions[i].isUserInteraction) {
+            // Do nothing if next action is within the limit of threshold
+            if (allActions[i].delay - this.timer.timeOffset < SKIP_TIME_THRESHOLD) return;
+            nextUserInteraction = allActions[i];
+            break;
+          }
+        }
+
+        // otherwise, if had no user interaction for the past second -> start skipping
+        // TODO: Check if second passed since last user interaction
+        if (nextUserInteraction) this.startSkipping(nextUserInteraction.delay - this.timer.timeOffset - SKIP_END_BUFFER);
+        else if (this.config.totalSessionLength) this.startSkipping(this.config.totalSessionLength - this.timer.timeOffset);
+        else this.startSkipping();
+      },
     });
     this.service = createPlayerService(
       {
@@ -308,10 +343,6 @@ export class Replayer {
         this.service.state.context.lastPlayedEvent
       ) {
         this.config.skipInactive = true;
-        this.maybeSkipInactive(
-          this.service.state.context.lastPlayedEvent,
-          false,
-        );
         return;
       }
 
@@ -561,7 +592,11 @@ export class Replayer {
       events,
       (event, index) => {
         this.applyEvent(event);
-        if (!long && (performance.now() - start > 150) && index < events.length / 2) {
+        if (
+          !long &&
+          performance.now() - start > 150 &&
+          index < events.length / 2
+        ) {
           this.emitter.emit(ReplayerEvents.LongPatchStart);
         }
       },
@@ -573,66 +608,13 @@ export class Replayer {
     );
   }
 
-  private maybeSkipInactive(event: eventWithTime, isSync: boolean) {
-    if (isSync) return; // do not check skip in sync
-
-    if (event === this.nextUserInteractionEvent) {
-      this.nextUserInteractionEvent = null;
-      this.backToNormal();
-    }
-    if (this.config.skipInactive) {
-      if (!this.nextUserInteractionEvent) {
-        const eventIndex = this.service.state.context.events.indexOf(event);
-        if (eventIndex === -1) return;
-
-        let hasFollowingInteraction = false;
-        for (
-          let i = eventIndex;
-          i < this.service.state.context.events.length;
-          i++
-        ) {
-          const _event = this.service.state.context.events[i];
-
-          if (isUserInteraction(_event)) {
-            hasFollowingInteraction = true;
-            if (_event.delay! - event.delay! > SKIP_TIME_THRESHOLD) {
-              this.nextUserInteractionEvent = _event;
-            }
-            break;
-          }
-        }
-
-        if (
-          !this.nextUserInteractionEvent &&
-          !hasFollowingInteraction &&
-          this.service.state.context.events.length
-        ) {
-          // Was not able to find a next user interaction event.
-          // Use last one
-          const lastEvent = this.service.state.context.events[
-            this.service.state.context.events.length - 1
-          ];
-          if (
-            lastEvent.timestamp > event.timestamp &&
-            lastEvent.timestamp - event.timestamp > SKIP_TIME_THRESHOLD
-          ) {
-            this.nextUserInteractionEvent = lastEvent;
-          }
-        }
-
-        if (this.nextUserInteractionEvent) {
-          const skipTime =
-            this.nextUserInteractionEvent.timestamp - event.timestamp;
-
-          const payload = {
-            // inactive period play time max 3 secs
-            speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
-          };
-          this.speedService.send({ type: 'FAST_FORWARD', payload });
-          this.emitter.emit(ReplayerEvents.SkipStart, payload);
-        }
-      }
-    }
+  private startSkipping(skipTime?: number) {
+    const payload = {
+      // inactive period play time max 3 secs
+      speed: skipTime ? Math.round(skipTime / SKIP_TIME_INTERVAL) : 20, // by default: 1m/3sec
+    };
+    this.speedService.send({ type: 'FAST_FORWARD', payload });
+    this.emitter.emit(ReplayerEvents.SkipStart, payload);
   }
 
   private getCastFn(event: eventWithTime, isSync = false) {
@@ -685,7 +667,6 @@ export class Replayer {
       if (castFn) {
         castFn();
       }
-      this.maybeSkipInactive(event, isSync);
 
       for (const plugin of this.config.plugins || []) {
         plugin.handler(event, isSync, { replayer: this });
@@ -984,6 +965,7 @@ export class Replayer {
                 p.timeOffset +
                 e.timestamp -
                 this.service.state.context.baselineTime,
+              isUserInteraction: true,
             };
             this.timer.addAction(action);
           });
@@ -991,6 +973,7 @@ export class Replayer {
           this.timer.addAction({
             doAction() {},
             delay: e.delay! - d.positions[0]?.timeOffset,
+            isUserInteraction: true,
           });
         }
         break;
@@ -1904,7 +1887,6 @@ export class Replayer {
   }
 
   private backToNormal() {
-    this.nextUserInteractionEvent = null;
     if (this.speedService.state.matches('normal')) {
       return;
     }

@@ -8,6 +8,7 @@ import {
   IncrementalSource,
 } from '../types';
 import { Timer, addDelay } from './timer';
+import { isUserInteraction } from './utils';
 
 export type PlayerContext = {
   events: eventWithTime[];
@@ -201,6 +202,7 @@ export function createPlayerService(
                   castFn();
                 },
                 delay: event.delay!,
+                isUserInteraction: isUserInteraction(event),
               });
             }
           }
@@ -264,6 +266,7 @@ export function createPlayerService(
                   castFn();
                 },
                 delay: event.delay!,
+                isUserInteraction: isUserInteraction(event),
               });
             }
           }
