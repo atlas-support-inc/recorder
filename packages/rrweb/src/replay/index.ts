@@ -40,6 +40,7 @@ import {
   styleValueWithPriority,
   mouseMovePos,
   IWindow,
+  actionWithDelay,
 } from '../types';
 import {
   createMirror,
@@ -51,6 +52,7 @@ import {
   isIframeINode,
   getBaseDimension,
   hasShadowRoot,
+  asyncLoop,
 } from '../utils';
 import getInjectStyleRules from './styles/inject-style';
 import './styles/style.css';
@@ -64,7 +66,6 @@ import {
   getPositionsAndIndex,
 } from './virtual-styles';
 import {
-  isUserInteraction,
   SKIP_TIME_INTERVAL,
   SKIP_TIME_THRESHOLD,
 } from './utils';
@@ -80,6 +81,8 @@ const shopifyShorthandCSSFix =
 const mitt = (mittProxy as any).default || mittProxy;
 
 const REPLAY_CONSOLE_PREFIX = '[replayer]';
+
+const SKIP_END_BUFFER = 1e3; // 1 second before user activity to exit skipping
 
 const defaultMouseTailConfig = {
   duration: 500,
@@ -115,8 +118,6 @@ export class Replayer {
 
   private emitter: Emitter = mitt();
 
-  private nextUserInteractionEvent: eventWithTime | null;
-
   // tslint:disable-next-line: variable-name
   private legacy_missingNodeRetryMap: missingNodeMap = {};
 
@@ -139,6 +140,8 @@ export class Replayer {
 
   private mousePos: mouseMovePos | null = null;
   private touchActive: boolean | null = null;
+
+  private lastApplyCancelFn?: () => void;
 
   constructor(
     events: Array<eventWithTime | string>,
@@ -167,7 +170,7 @@ export class Replayer {
 
     this.handleResize = this.handleResize.bind(this);
     this.getCastFn = this.getCastFn.bind(this);
-    this.applyEventsSynchronously = this.applyEventsSynchronously.bind(this);
+    this.applyEventsAsynchronously = this.applyEventsAsynchronously.bind(this);
     this.emitter.on(ReplayerEvents.Resize, this.handleResize as Handler);
 
     this.setupDom();
@@ -208,6 +211,41 @@ export class Replayer {
 
     const timer = new Timer([], {
       speed: config?.speed || defaultConfig.speed,
+      onTick: (actions, nextActions) => {
+        if (!this.config.skipInactive) return;
+
+        const allActions = actions.concat(nextActions);
+        const skipping = this.speedService.state.matches('skipping');
+        if (skipping) {
+          // if has user interaction in the time buffer -> backToNormal
+          for (let i = 0; i < allActions.length; i++) {
+            // Quit the loop if next action has delay over the limit of buffer
+            if (allActions[i].delay - this.timer.timeOffset > SKIP_END_BUFFER)
+              break;
+            if (allActions[i].isUserInteraction) {
+              this.backToNormal();
+              return;
+            }
+          }
+          return;
+        }
+
+        let nextUserInteraction: actionWithDelay | null = null;
+        for (let i = 0; i < allActions.length; i++) {
+          if (allActions[i].isUserInteraction) {
+            // Do nothing if next action is within the limit of threshold
+            if (allActions[i].delay - this.timer.timeOffset < SKIP_TIME_THRESHOLD) return;
+            nextUserInteraction = allActions[i];
+            break;
+          }
+        }
+
+        // otherwise, if had no user interaction for the past second -> start skipping
+        // TODO: Check if second passed since last user interaction
+        if (nextUserInteraction) this.startSkipping(nextUserInteraction.delay - this.timer.timeOffset - SKIP_END_BUFFER);
+        else if (this.config.totalSessionLength) this.startSkipping(this.config.totalSessionLength - this.timer.timeOffset);
+        else this.startSkipping();
+      },
     });
     this.service = createPlayerService(
       {
@@ -226,7 +264,7 @@ export class Replayer {
       },
       {
         getCastFn: this.getCastFn,
-        applyEventsSynchronously: this.applyEventsSynchronously,
+        applyEventsAsynchronously: this.applyEventsAsynchronously,
         emitter: this.emitter,
       },
     );
@@ -305,10 +343,6 @@ export class Replayer {
         this.service.state.context.lastPlayedEvent
       ) {
         this.config.skipInactive = true;
-        this.maybeSkipInactive(
-          this.service.state.context.lastPlayedEvent,
-          false,
-        );
         return;
       }
 
@@ -498,31 +532,32 @@ export class Replayer {
     }
   }
 
-  private applyEventsSynchronously(events: Array<eventWithTime>) {
-    for (const event of events) {
-      switch (event.type) {
-        case EventType.DomContentLoaded:
-        case EventType.Load:
-        case EventType.Custom:
-          continue;
-        case EventType.FullSnapshot:
-        case EventType.Meta:
-        case EventType.Plugin:
-          break;
-        case EventType.IncrementalSnapshot:
-          switch (event.data.source) {
-            case IncrementalSource.MediaInteraction:
-              continue;
-            default:
-              break;
-          }
-          break;
-        default:
-          break;
-      }
-      const castFn = this.getCastFn(event, true);
-      castFn();
+  private applyEvent(event: eventWithTime) {
+    switch (event.type) {
+      case EventType.DomContentLoaded:
+      case EventType.Load:
+      case EventType.Custom:
+        return;
+      case EventType.FullSnapshot:
+      case EventType.Meta:
+      case EventType.Plugin:
+        break;
+      case EventType.IncrementalSnapshot:
+        switch (event.data.source) {
+          case IncrementalSource.MediaInteraction:
+            return;
+          default:
+            break;
+        }
+        break;
+      default:
+        break;
     }
+    const castFn = this.getCastFn(event, true);
+    castFn();
+  }
+
+  private applyTouchAndMouse() {
     if (this.mousePos) {
       this.moveAndHover(
         this.mousePos.x,
@@ -541,62 +576,45 @@ export class Replayer {
     this.touchActive = null;
   }
 
-  private maybeSkipInactive(event: eventWithTime, isSync: boolean) {
-    if (isSync) return; // do not check skip in sync
-
-    if (event === this.nextUserInteractionEvent) {
-      this.nextUserInteractionEvent = null;
-      this.backToNormal();
+  private applyEventsAsynchronously(
+    events: Array<eventWithTime>,
+    done: () => void,
+  ) {
+    if (this.lastApplyCancelFn) {
+      this.lastApplyCancelFn();
+      this.emitter.emit(ReplayerEvents.LongPatchEnd);
     }
-    if (this.config.skipInactive) {
-      if (!this.nextUserInteractionEvent) {
-        const eventIndex = this.service.state.context.events.indexOf(event);
-        if (eventIndex === -1) return;
-        
-        let hasFollowingInteraction = false;
-        for (let i = eventIndex; i < this.service.state.context.events.length; i++) {
-          const _event = this.service.state.context.events[i];
 
-          if (isUserInteraction(_event)) {
-            hasFollowingInteraction = true;
-            if (_event.delay! - event.delay! > SKIP_TIME_THRESHOLD) {
-              this.nextUserInteractionEvent = _event;
-            }
-            break;
-          }
-        }
+    const start = performance.now();
+    let long = false;
 
+    this.lastApplyCancelFn = asyncLoop(
+      events,
+      (event, index) => {
+        this.applyEvent(event);
         if (
-          !this.nextUserInteractionEvent &&
-          !hasFollowingInteraction &&
-          this.service.state.context.events.length
+          !long &&
+          performance.now() - start > 150 &&
+          index < events.length / 2
         ) {
-          // Was not able to find a next user interaction event.
-          // Use last one
-          const lastEvent = this.service.state.context.events[
-            this.service.state.context.events.length - 1
-          ];
-          if (
-            lastEvent.timestamp > event.timestamp &&
-            lastEvent.timestamp - event.timestamp > SKIP_TIME_THRESHOLD
-          ) {
-            this.nextUserInteractionEvent = lastEvent;
-          }
+          this.emitter.emit(ReplayerEvents.LongPatchStart);
         }
+      },
+      () => {
+        this.applyTouchAndMouse();
+        this.emitter.emit(ReplayerEvents.LongPatchEnd);
+        done();
+      },
+    );
+  }
 
-        if (this.nextUserInteractionEvent) {
-          const skipTime =
-            this.nextUserInteractionEvent.timestamp - event.timestamp;
-
-          const payload = {
-            // inactive period play time max 3 secs
-            speed: Math.round(skipTime / SKIP_TIME_INTERVAL),
-          };
-          this.speedService.send({ type: 'FAST_FORWARD', payload });
-          this.emitter.emit(ReplayerEvents.SkipStart, payload);
-        }
-      }
-    }
+  private startSkipping(skipTime?: number) {
+    const payload = {
+      // inactive period play time max 3 secs
+      speed: skipTime ? Math.round(skipTime / SKIP_TIME_INTERVAL) : 20, // by default: 1m/3sec
+    };
+    this.speedService.send({ type: 'FAST_FORWARD', payload });
+    this.emitter.emit(ReplayerEvents.SkipStart, payload);
   }
 
   private getCastFn(event: eventWithTime, isSync = false) {
@@ -649,7 +667,6 @@ export class Replayer {
       if (castFn) {
         castFn();
       }
-      this.maybeSkipInactive(event, isSync);
 
       for (const plugin of this.config.plugins || []) {
         plugin.handler(event, isSync, { replayer: this });
@@ -948,6 +965,7 @@ export class Replayer {
                 p.timeOffset +
                 e.timestamp -
                 this.service.state.context.baselineTime,
+              isUserInteraction: true,
             };
             this.timer.addAction(action);
           });
@@ -955,6 +973,7 @@ export class Replayer {
           this.timer.addAction({
             doAction() {},
             delay: e.delay! - d.positions[0]?.timeOffset,
+            isUserInteraction: true,
           });
         }
         break;
@@ -1868,7 +1887,6 @@ export class Replayer {
   }
 
   private backToNormal() {
-    this.nextUserInteractionEvent = null;
     if (this.speedService.state.matches('normal')) {
       return;
     }

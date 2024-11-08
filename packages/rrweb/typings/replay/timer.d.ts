@@ -5,8 +5,10 @@ export declare class Timer {
     private actions;
     private raf;
     private lastTimestamp;
+    private onTick;
     constructor(actions: actionWithDelay[] | undefined, config: {
         speed: number;
+        onTick: (actions: actionWithDelay[], nextActions: actionWithDelay[]) => void;
     });
     addAction(action: actionWithDelay): void;
     start(): void;

@@ -69,4 +69,5 @@ export declare function getBaseDimension(node: Node, rootIframe: Node): Document
 export declare function hasShadowRoot<T extends Node>(n: T): n is T & {
     shadowRoot: ShadowRoot;
 };
+export declare function asyncLoop<T>(items: T[], fn: (item: T, index: number) => void, done: () => void): () => void;
 export {};

@@ -8,6 +8,7 @@ import {
   IncrementalSource,
 } from '../types';
 import { Timer, addDelay } from './timer';
+import { isUserInteraction } from './utils';
 
 export type PlayerContext = {
   events: eventWithTime[];
@@ -75,12 +76,15 @@ export function discardPriorSnapshots(
 
 type PlayerAssets = {
   emitter: Emitter;
-  applyEventsSynchronously(events: Array<eventWithTime>): void;
+  applyEventsAsynchronously(
+    events: Array<eventWithTime>,
+    done: () => void,
+  ): void;
   getCastFn(event: eventWithTime, isSync: boolean): () => void;
 };
 export function createPlayerService(
   context: PlayerContext,
-  { getCastFn, applyEventsSynchronously, emitter }: PlayerAssets,
+  { getCastFn, applyEventsAsynchronously, emitter }: PlayerAssets,
 ) {
   const playerMachine = createMachine<PlayerContext, PlayerEvent, PlayerState>(
     {
@@ -198,12 +202,14 @@ export function createPlayerService(
                   castFn();
                 },
                 delay: event.delay!,
+                isUserInteraction: isUserInteraction(event),
               });
             }
           }
-          applyEventsSynchronously(syncEvents);
-          emitter.emit(ReplayerEvents.Flush);
-          timer.start();
+          applyEventsAsynchronously(syncEvents, () => {
+            emitter.emit(ReplayerEvents.Flush);
+            timer.start();
+          });
         },
         pause(ctx) {
           ctx.timer.clear();
@@ -260,6 +266,7 @@ export function createPlayerService(
                   castFn();
                 },
                 delay: event.delay!,
+                isUserInteraction: isUserInteraction(event),
               });
             }
           }

@@ -13,14 +13,18 @@ export class Timer {
   private raf: number | true | null = null;
   private lastTimestamp: number;
 
+  private onTick: (actions: actionWithDelay[], nextActions: actionWithDelay[]) => void;
+
   constructor(
     actions: actionWithDelay[] = [],
     config: {
       speed: number;
+      onTick: (actions: actionWithDelay[], nextActions: actionWithDelay[]) => void;
     },
   ) {
     this.actions = actions;
     this.speed = config.speed;
+    this.onTick = config.onTick;
   }
   /**
    * Add an action, possibly after the timer starts.
@@ -71,16 +75,13 @@ export class Timer {
     const time = performance.now();
     this.timeOffset += (time - this.lastTimestamp) * this.speed;
     this.lastTimestamp = time;
-    while (this.actions.length) {
-      const action = this.actions[0];
-
-      if (this.timeOffset >= action.delay) {
-        this.actions.shift();
-        action.doAction();
-      } else {
-        break;
-      }
+    let index = 0;
+    while (index < this.actions.length && this.timeOffset >= this.actions[index].delay) index++;
+    const actions = this.actions.splice(0, index);
+    for (let i = 0; i < actions.length; i++) {
+      actions[i].doAction();
     }
+    this.onTick(actions, this.actions);
     if (this.actions.length > 0) {
       this.raf = requestAnimationFrame(this.rafCheck.bind(this));
     } else {

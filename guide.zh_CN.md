@@ -380,6 +380,8 @@ replayer.on(EVENT_NAME, (payload) => {
 | load-stylesheet-end    | 加载远端样式表完成     | -                 |
 | skip-start             | 开始跳过无用户操作时间 | { speed }         |
 | skip-end               | 结束无用户操作时间     | { speed }         |
+| long-patch-start       | started patching dom with events    |                   |
+| long-patch-end         | finished applying patches           |                   |
 | mouse-interaction      | 回放鼠标交互事件       | { type, target }  |
 | event-cast             | 回放 event             | event             |
 | custom-event           | 回放自定义事件         | event             |

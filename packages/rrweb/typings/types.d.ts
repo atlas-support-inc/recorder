@@ -408,6 +408,7 @@ export declare type playerConfig = {
     root: Element;
     loadTimeout: number;
     skipInactive: boolean;
+    totalSessionLength?: number;
     showWarning: boolean;
     showDebug: boolean;
     blockClass: string;
@@ -440,6 +441,7 @@ export declare type missingNodeMap = {
 export declare type actionWithDelay = {
     doAction: () => void;
     delay: number;
+    isUserInteraction: boolean;
 };
 export declare type Handler = (event?: unknown) => void;
 export declare type Emitter = {
@@ -459,6 +461,8 @@ export declare enum ReplayerEvents {
     LoadStylesheetEnd = "load-stylesheet-end",
     SkipStart = "skip-start",
     SkipEnd = "skip-end",
+    LongPatchStart = "long-patch-start",
+    LongPatchEnd = "long-patch-end",
     MouseInteraction = "mouse-interaction",
     EventCast = "event-cast",
     CustomEvent = "custom-event",

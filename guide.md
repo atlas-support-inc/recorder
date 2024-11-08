@@ -380,6 +380,8 @@ The event list:
 | load-stylesheet-end    | loaded remote stylesheets           | -                 |
 | skip-start             | started to skip inactive time       | { speed }         |
 | skip-end               | skipped inactive time               | { speed }         |
+| long-patch-start       | started patching dom with events    |                   |
+| long-patch-end         | finished applying patches           |                   |
 | mouse-interaction      | mouse interaction has been replayed | { type, target }  |
 | event-cast             | event has been replayed             | event             |
 | custom-event           | custom event has been replayed      | event             |

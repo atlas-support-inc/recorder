@@ -13,7 +13,6 @@ export declare class Replayer {
     private mouseTail;
     private tailPositions;
     private emitter;
-    private nextUserInteractionEvent;
     private legacy_missingNodeRetryMap;
     private treeIndex;
     private fragmentParentMap;
@@ -26,6 +25,7 @@ export declare class Replayer {
     private newDocumentQueue;
     private mousePos;
     private touchActive;
+    private lastApplyCancelFn?;
     constructor(events: Array<eventWithTime | string>, config?: Partial<playerConfig>);
     on(event: string, handler: Handler): this;
     off(event: string, handler: Handler): this;
@@ -44,8 +44,10 @@ export declare class Replayer {
     resetCache(): void;
     private setupDom;
     private handleResize;
-    private applyEventsSynchronously;
-    private maybeSkipInactive;
+    private applyEvent;
+    private applyTouchAndMouse;
+    private applyEventsAsynchronously;
+    private startSkipping;
     private getCastFn;
     private rebuildFullSnapshot;
     private insertStyleRules;
