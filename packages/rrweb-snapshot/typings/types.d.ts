@@ -59,6 +59,9 @@ export declare type DialogAttributes = {
 export interface INode extends Node {
     __sn_atlas: serializedNodeWithId;
 }
+export interface ICanvas extends HTMLCanvasElement {
+    __context: string;
+}
 export declare type idNodeMap = {
     [key: number]: INode;
 };
@@ -91,6 +94,10 @@ export declare type SlimDOMOptions = Partial<{
     headMetaHttpEquiv: boolean;
     headMetaAuthorship: boolean;
     headMetaVerification: boolean;
+}>;
+export declare type DataURLOptions = Partial<{
+    type: string;
+    quality: number;
 }>;
 export declare type MaskTextFn = (text: string) => string;
 export declare type MaskInputFn = (text: string) => string;

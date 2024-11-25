@@ -20,3 +20,7 @@ declare var requestIdleCallback: (
   options?: { timeout: number },
 ) => number;
 declare var cancelIdleCallback: (handle: number) => void;
+
+interface MessageEvent<T = {}> extends Event {
+  readonly data: T | any;
+}

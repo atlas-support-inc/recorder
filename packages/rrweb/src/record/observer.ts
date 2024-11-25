@@ -6,7 +6,7 @@ import {
   needMaskingText,
   MaskInputFn,
   MaskTextFn,
-  MaskImageFn,
+  MaskImageFn, DataURLOptions,
 } from 'rrweb-snapshot';
 import { FontFaceSet } from 'css-font-loading-module';
 import {
@@ -51,6 +51,7 @@ import {
 import MutationBuffer from './mutation';
 import { IframeManager } from './iframe-manager';
 import { ShadowDomManager } from './shadow-dom-manager';
+import { CanvasManager } from './observers/canvas/canvas-manager';
 
 type WindowWithStoredMutationObserver = IWindow & {
   __rrMutationObserver?: MutationObserver;
@@ -103,9 +104,11 @@ export function initMutationObserver(
   recordCanvas: boolean,
   inlineImages: boolean,
   slimDOMOptions: SlimDOMOptions,
+  dataURLOptions: DataURLOptions,
   mirror: Mirror,
   iframeManager: IframeManager,
   shadowDomManager: ShadowDomManager,
+  canvasManager: CanvasManager,
   rootEl: Node,
 ): MutationObserver {
   const mutationBuffer = new MutationBuffer();
@@ -126,10 +129,12 @@ export function initMutationObserver(
     recordCanvas,
     inlineImages,
     slimDOMOptions,
+    dataURLOptions,
     doc,
     mirror,
     iframeManager,
     shadowDomManager,
+    canvasManager,
   );
   let mutationObserverCtor =
     window.MutationObserver ||
@@ -764,88 +769,6 @@ function initMediaInteractionObserver(
   };
 }
 
-function initCanvasMutationObserver(
-  cb: canvasMutationCallback,
-  win: IWindow,
-  blockClass: blockClass,
-  mirror: Mirror,
-): listenerHandler {
-  const props = Object.getOwnPropertyNames(
-    win.CanvasRenderingContext2D.prototype,
-  );
-  const handlers: listenerHandler[] = [];
-  for (const prop of props) {
-    try {
-      if (
-        typeof win.CanvasRenderingContext2D.prototype[
-          prop as keyof CanvasRenderingContext2D
-        ] !== 'function'
-      ) {
-        continue;
-      }
-      const restoreHandler = patch(
-        win.CanvasRenderingContext2D.prototype,
-        prop,
-        function (original) {
-          return function (
-            this: CanvasRenderingContext2D,
-            ...args: Array<unknown>
-          ) {
-            if (!isBlocked(this.canvas, blockClass)) {
-              setTimeout(() => {
-                const recordArgs = [...args];
-                if (prop === 'drawImage') {
-                  if (
-                    recordArgs[0] &&
-                    recordArgs[0] instanceof HTMLCanvasElement
-                  ) {
-                    const canvas = recordArgs[0];
-                    const ctx = canvas.getContext('2d');
-                    let imgd = ctx?.getImageData(
-                      0,
-                      0,
-                      canvas.width,
-                      canvas.height,
-                    );
-                    let pix = imgd?.data;
-                    recordArgs[0] = JSON.stringify(pix);
-                  }
-                }
-                cb({
-                  id: mirror.getId((this.canvas as unknown) as INode),
-                  property: prop,
-                  args: recordArgs,
-                });
-              }, 0);
-            }
-            return original.apply(this, args);
-          };
-        },
-      );
-      handlers.push(restoreHandler);
-    } catch {
-      const hookHandler = hookSetter<CanvasRenderingContext2D>(
-        win.CanvasRenderingContext2D.prototype,
-        prop,
-        {
-          set(v) {
-            cb({
-              id: mirror.getId((this.canvas as unknown) as INode),
-              property: prop,
-              args: [v],
-              setter: true,
-            });
-          },
-        },
-      );
-      handlers.push(hookHandler);
-    }
-  }
-  return () => {
-    handlers.forEach((h) => h());
-  };
-}
-
 function initFontObserver(cb: fontCallback, doc: Document): listenerHandler {
   const win = doc.defaultView as IWindow;
   if (!win) {
@@ -1007,9 +930,11 @@ export function initObservers(
     o.recordCanvas,
     o.inlineImages,
     o.slimDOMOptions,
+    o.dataURLOptions,
     o.mirror,
     o.iframeManager,
     o.shadowDomManager,
+    o.canvasManager,
     o.doc,
   );
   const mousemoveHandler = initMoveObserver(
@@ -1065,14 +990,6 @@ export function initObservers(
     currentWindow,
     o.mirror,
   );
-  const canvasMutationObserver = o.recordCanvas
-    ? initCanvasMutationObserver(
-        o.canvasMutationCb,
-        currentWindow,
-        o.blockClass,
-        o.mirror,
-      )
-    : () => {};
   const fontObserver = o.collectFonts
     ? initFontObserver(o.fontCb, o.doc)
     : () => {};
@@ -1085,6 +1002,7 @@ export function initObservers(
   }
 
   return () => {
+    mutationBuffers.forEach((b) => b.reset());
     mutationObserver.disconnect();
     mousemoveHandler();
     mouseInteractionHandler();
@@ -1094,7 +1012,6 @@ export function initObservers(
     mediaInteractionHandler();
     styleSheetObserver();
     styleDeclarationObserver();
-    canvasMutationObserver();
     fontObserver();
     pluginHandlers.forEach((h) => h());
   };

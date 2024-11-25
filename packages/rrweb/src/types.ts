@@ -7,11 +7,13 @@ import {
   MaskInputFn,
   MaskTextFn,
   MaskImageFn,
+  DataURLOptions,
 } from 'rrweb-snapshot';
 import { PackFn, UnpackFn } from './packer/base';
 import { IframeManager } from './record/iframe-manager';
 import { ShadowDomManager } from './record/shadow-dom-manager';
 import type { Replayer } from './replay';
+import { CanvasManager } from './record/observers/canvas/canvas-manager';
 
 export enum EventType {
   DomContentLoaded,
@@ -207,6 +209,12 @@ export type SamplingStrategy = Partial<{
    * Only used when sampling input is set to 'debounce'
    */
   inputDebounce: number;
+  /**
+   * 'all' will record every single canvas call
+   * number between 1 and 60, will record an image snapshots in a web-worker a (maximum) number of times per second.
+   * Number only supported where [`OffscreenCanvas`](http://mdn.io/offscreencanvas) is supported.
+   */
+  canvas: 'all' | number;
 }>;
 
 export type RecordPlugin<TOptions = unknown> = {
@@ -243,6 +251,7 @@ export type recordOptions<T> = {
   hooks?: hooksParam;
   packFn?: PackFn;
   sampling?: SamplingStrategy;
+  dataURLOptions?: DataURLOptions;
   recordCanvas?: boolean;
   userTriggeredOnInput?: boolean;
   collectFonts?: boolean;
@@ -283,10 +292,12 @@ export type observerParam = {
   userTriggeredOnInput: boolean;
   collectFonts: boolean;
   slimDOMOptions: SlimDOMOptions;
+  dataURLOptions: DataURLOptions;
   doc: Document;
   mirror: Mirror;
   iframeManager: IframeManager;
   shadowDomManager: ShadowDomManager;
+  canvasManager: CanvasManager;
   plugins: Array<{
     observer: Function;
     callback: Function;
@@ -406,11 +417,68 @@ export enum MouseInteractions {
   TouchCancel,
 }
 
+export enum CanvasContext {
+  '2D',
+  WebGL,
+  WebGL2,
+}
+
+export type SerializedCanvasArg =
+  | {
+  rr_type: 'ArrayBuffer';
+  base64: string; // base64
+}
+  | {
+  rr_type: 'Blob';
+  data: Array<CanvasArg>;
+  type?: string;
+}
+  | {
+  rr_type: string;
+  src: string; // url of image
+}
+  | {
+  rr_type: string;
+  args: Array<CanvasArg>;
+}
+  | {
+  rr_type: string;
+  index: number;
+};
+
+export type CanvasArg =
+  | SerializedCanvasArg
+  | string
+  | number
+  | boolean
+  | null
+  | CanvasArg[];
+
 type mouseInteractionParam = {
   type: MouseInteractions;
   id: number;
   x: number;
   y: number;
+};
+
+export type ImageBitmapDataURLWorkerParams = {
+  id: number;
+  bitmap: ImageBitmap;
+  width: number;
+  height: number;
+  dataURLOptions: DataURLOptions;
+};
+
+export type ImageBitmapDataURLWorkerResponse =
+  | {
+  id: number;
+}
+  | {
+  id: number;
+  type: string;
+  base64: string;
+  width: number;
+  height: number;
 };
 
 export type mouseInteractionCallBack = (d: mouseInteractionParam) => void;
@@ -455,14 +523,33 @@ export type styleDeclarationParam = {
 
 export type styleDeclarationCallback = (s: styleDeclarationParam) => void;
 
-export type canvasMutationCallback = (p: canvasMutationParam) => void;
-
-export type canvasMutationParam = {
-  id: number;
+export type canvasMutationCommand = {
   property: string;
   args: Array<unknown>;
   setter?: true;
 };
+
+export type canvasMutationParam =
+  | {
+      id: number;
+      type: CanvasContext;
+      commands: canvasMutationCommand[];
+    }
+  | ({
+      id: number;
+      type: CanvasContext;
+    } & canvasMutationCommand);
+
+export type canvasMutationWithType = {
+  type: CanvasContext;
+} & canvasMutationCommand;
+
+export type canvasMutationCallback = (p: canvasMutationParam) => void;
+
+export type canvasManagerMutationCallback = (
+  target: HTMLCanvasElement,
+  p: canvasMutationWithType,
+) => void;
 
 export type fontParam = {
   family: string;

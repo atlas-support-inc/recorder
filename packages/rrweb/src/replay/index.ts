@@ -41,6 +41,8 @@ import {
   mouseMovePos,
   IWindow,
   actionWithDelay,
+  canvasMutationCommand,
+  canvasMutationParam,
 } from '../types';
 import {
   createMirror,
@@ -65,10 +67,10 @@ import {
   getNestedRule,
   getPositionsAndIndex,
 } from './virtual-styles';
-import {
-  SKIP_TIME_INTERVAL,
-  SKIP_TIME_THRESHOLD,
-} from './utils';
+import canvasMutation from './canvas';
+import { deserializeArg } from './canvas/deserialize-args';
+
+import { SKIP_TIME_INTERVAL, SKIP_TIME_THRESHOLD } from './utils';
 import { applyDialogToTopLevel, removeDialogFromTopLevel } from './dialog';
 
 // Fix for Shopify's shorthand CSS properties (animation)
@@ -130,7 +132,8 @@ export class Replayer {
   // The replayer uses the cache to speed up replay and scrubbing.
   private cache: BuildCache = createCache();
 
-  private imageMap: Map<eventWithTime, HTMLImageElement> = new Map();
+  private imageMap: Map<eventWithTime | string, HTMLImageElement> = new Map();
+  private canvasEventMap: Map<eventWithTime, canvasMutationParam> = new Map();
 
   private mirror: Mirror = createMirror();
 
@@ -147,6 +150,7 @@ export class Replayer {
     events: Array<eventWithTime | string>,
     config?: Partial<playerConfig>,
   ) {
+    console.log('Hello there, 19.11.24!');
     if (!config?.liveMode && events.length < 2) {
       throw new Error('Replayer need at least 2 events.');
     }
@@ -234,7 +238,11 @@ export class Replayer {
         for (let i = 0; i < allActions.length; i++) {
           if (allActions[i].isUserInteraction) {
             // Do nothing if next action is within the limit of threshold
-            if (allActions[i].delay - this.timer.timeOffset < SKIP_TIME_THRESHOLD) return;
+            if (
+              allActions[i].delay - this.timer.timeOffset <
+              SKIP_TIME_THRESHOLD
+            )
+              return;
             nextUserInteraction = allActions[i];
             break;
           }
@@ -242,8 +250,14 @@ export class Replayer {
 
         // otherwise, if had no user interaction for the past second -> start skipping
         // TODO: Check if second passed since last user interaction
-        if (nextUserInteraction) this.startSkipping(nextUserInteraction.delay - this.timer.timeOffset - SKIP_END_BUFFER);
-        else if (this.config.totalSessionLength) this.startSkipping(this.config.totalSessionLength - this.timer.timeOffset);
+        if (nextUserInteraction)
+          this.startSkipping(
+            nextUserInteraction.delay - this.timer.timeOffset - SKIP_END_BUFFER,
+          );
+        else if (this.config.totalSessionLength)
+          this.startSkipping(
+            this.config.totalSessionLength - this.timer.timeOffset,
+          );
         else this.startSkipping();
       },
     });
@@ -899,27 +913,65 @@ export class Replayer {
   /**
    * pause when there are some canvas drawImage args need to be loaded
    */
-  private preloadAllImages() {
+  private async preloadAllImages(): Promise<void[]> {
     let beforeLoadState = this.service.state;
     const stateHandler = () => {
       beforeLoadState = this.service.state;
     };
     this.emitter.on(ReplayerEvents.Start, stateHandler);
     this.emitter.on(ReplayerEvents.Pause, stateHandler);
+    const promises: Promise<void>[] = [];
     for (const event of this.service.state.context.events) {
-      if (
-        event.type === EventType.IncrementalSnapshot &&
-        event.data.source === IncrementalSource.CanvasMutation &&
-        event.data.property === 'drawImage' &&
-        typeof event.data.args[0] === 'string' &&
-        !this.imageMap.has(event)
-      ) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const imgd = ctx?.createImageData(canvas.width, canvas.height);
-        let d = imgd?.data;
-        d = JSON.parse(event.data.args[0]);
-        ctx?.putImageData(imgd!, 0, 0);
+      promises.push(this.deserializeAndPreloadCanvasEvents(event.data as canvasMutationData, event));
+      const commands =
+        'commands' in event.data ? event.data.commands : [event.data];
+      commands.forEach((c) => {
+        this.preloadImages(c as canvasMutationCommand, event);
+      });
+    }
+    return Promise.all(promises);
+  }
+
+  private preloadImages(data: canvasMutationCommand, event: eventWithTime) {
+    if (
+      data.property === 'drawImage' &&
+      typeof data.args[0] === 'string' &&
+      !this.imageMap.has(event)
+    ) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const imgd = ctx?.createImageData(canvas.width, canvas.height);
+      let d = imgd?.data;
+      d = JSON.parse(data.args[0]);
+      ctx?.putImageData(imgd!, 0, 0);
+    }
+  }
+
+  private async deserializeAndPreloadCanvasEvents(
+    data: canvasMutationData,
+    event: eventWithTime,
+  ) {
+    if (!this.canvasEventMap.has(event)) {
+      const status = {
+        isUnchanged: true,
+      };
+      if ('commands' in data) {
+        const commands = await Promise.all(
+          data.commands?.map(async (c) => {
+            const args = await Promise.all(
+              c.args?.map(deserializeArg(this.imageMap, null, status)),
+            );
+            return { ...c, args };
+          }),
+        );
+        if (status.isUnchanged === false)
+          this.canvasEventMap.set(event, { ...data, commands });
+      } else {
+        const args = await Promise.all(
+          data.args.map(deserializeArg(this.imageMap, null, status)),
+        );
+        if (status.isUnchanged === false)
+          this.canvasEventMap.set(event, { ...data, args });
       }
     }
   }
@@ -1298,34 +1350,16 @@ export class Replayer {
         if (!target) {
           return this.debugNodeNotFound(d, d.id);
         }
-        try {
-          const ctx = ((target as unknown) as HTMLCanvasElement).getContext(
-            '2d',
-          )!;
-          if (d.setter) {
-            // skip some read-only type checks
-            // tslint:disable-next-line:no-any
-            (ctx as any)[d.property] = d.args[0];
-            return;
-          }
-          const original = ctx[
-            d.property as keyof CanvasRenderingContext2D
-          ] as Function;
-          /**
-           * We have serialized the image source into base64 string during recording,
-           * which has been preloaded before replay.
-           * So we can get call drawImage SYNCHRONOUSLY which avoid some fragile cast.
-           */
-          if (d.property === 'drawImage' && typeof d.args[0] === 'string') {
-            const image = this.imageMap.get(e);
-            d.args[0] = image;
-            original.apply(ctx, d.args);
-          } else {
-            original.apply(ctx, d.args);
-          }
-        } catch (error) {
-          this.warnCanvasMutationFailed(d, d.id, error);
-        }
+
+        canvasMutation({
+          event: e,
+          mutation: d,
+          target: (target as unknown) as HTMLCanvasElement,
+          imageMap: this.imageMap,
+          canvasEventMap: this.canvasEventMap,
+          errorHandler: this.warnCanvasMutationFailed.bind(this),
+        });
+
         break;
       }
       case IncrementalSource.Font: {
@@ -1994,11 +2028,10 @@ export class Replayer {
   }
 
   private warnCanvasMutationFailed(
-    d: canvasMutationData,
-    id: number,
+    d: canvasMutationData | canvasMutationCommand,
     error: unknown,
   ) {
-    this.warn(`Has error on update canvas '${id}'`, d, error);
+    this.warn(`Has error on canvas update`, error, 'canvas mutation:', d);
   }
 
   private debugNodeNotFound(
