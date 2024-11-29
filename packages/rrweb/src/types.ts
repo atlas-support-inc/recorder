@@ -629,6 +629,10 @@ export type ReplayPlugin = {
     isSync: boolean,
     context: { replayer: Replayer },
   ) => void;
+  onBuild?: (node: Node, context: {
+    id: number;
+    replayer: Replayer;
+  }) => void;
 };
 export type playerConfig = {
   speed: number;

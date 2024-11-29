@@ -78,6 +78,9 @@ import { applyDialogToTopLevel, removeDialogFromTopLevel } from './dialog';
 const shopifyShorthandCSSFix =
   '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }';
 
+const hideCanvasChildrenExceptSnapshot =
+  'canvas *:not(.rrweb-snapshot-canvas) { display: none; }';
+
 // https://github.com/rollup/rollup/issues/1267#issuecomment-296395734
 // tslint:disable-next-line
 const mitt = (mittProxy as any).default || mittProxy;
@@ -164,7 +167,10 @@ export class Replayer {
       showDebug: false,
       blockClass: 'rr-block',
       liveMode: false,
-      insertStyleRules: [shopifyShorthandCSSFix],
+      insertStyleRules: [
+        shopifyShorthandCSSFix,
+        hideCanvasChildrenExceptSnapshot,
+      ],
       triggerFocus: true,
       UNSAFE_replayCanvas: false,
       pauseAnimation: true,
@@ -738,9 +744,17 @@ export class Replayer {
     const collectedDialogs = new Set<HTMLDialogElement>();
     this.mirror.map = rebuild(event.data.node, {
       doc: this.iframe.contentDocument,
-      afterAppend: (builtNode) => {
+      afterAppend: (builtNode, id) => {
         if (builtNode.nodeName === 'DIALOG') {
           collectedDialogs.add((builtNode as unknown) as HTMLDialogElement);
+        }
+        for (const plugin of this.config.plugins || []) {
+          if (plugin.onBuild) {
+            plugin.onBuild(builtNode, {
+              id,
+              replayer: this,
+            });
+          }
         }
         this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
@@ -818,9 +832,17 @@ export class Replayer {
       map: this.mirror.map,
       hackCss: true,
       skipChild: false,
-      afterAppend: (builtNode) => {
+      afterAppend: (builtNode, id) => {
         if (builtNode.nodeName === 'DIALOG') {
           collectedDialogs.add((builtNode as unknown) as HTMLDialogElement);
+        }
+        for (const plugin of this.config.plugins || []) {
+          if (plugin.onBuild) {
+            plugin.onBuild(builtNode, {
+              id,
+              replayer: this,
+            });
+          }
         }
         this.collectIframeAndAttachDocument(collectedIframes, builtNode);
       },
@@ -922,7 +944,12 @@ export class Replayer {
     this.emitter.on(ReplayerEvents.Pause, stateHandler);
     const promises: Promise<void>[] = [];
     for (const event of this.service.state.context.events) {
-      promises.push(this.deserializeAndPreloadCanvasEvents(event.data as canvasMutationData, event));
+      promises.push(
+        this.deserializeAndPreloadCanvasEvents(
+          event.data as canvasMutationData,
+          event,
+        ),
+      );
       const commands =
         'commands' in event.data ? event.data.commands : [event.data];
       commands.forEach((c) => {
@@ -1555,12 +1582,20 @@ export class Replayer {
         this.attachDocumentToIframe(mutation, parent);
         return;
       }
+      const afterAppend = (node: Node, id: number) => {
+        for (const plugin of this.config.plugins || []) {
+          if (plugin.onBuild) {
+            plugin.onBuild(node, { id, replayer: this });
+          }
+        }
+      };
       const target = buildNodeWithSN(mutation.node, {
         doc: targetDoc as Document,
         map: this.mirror.map,
         skipChild: true,
         hackCss: true,
         cache: this.cache,
+        afterAppend,
       }) as INode;
 
       // legacy data, we should not have -1 siblings any more
@@ -1607,6 +1642,11 @@ export class Replayer {
 
         parent.appendChild(target);
       }
+
+      /**
+       * target was added, execute plugin hooks
+       */
+      afterAppend(target, mutation.node.id);
 
       if (isIframeINode(target)) {
         const mutationInQueue = this.newDocumentQueue.find(

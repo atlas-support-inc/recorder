@@ -311,7 +311,7 @@ export function buildNodeWithSN(
     map: idNodeMap;
     skipChild?: boolean;
     hackCss: boolean;
-    afterAppend?: (n: INode) => unknown;
+    afterAppend?: (n: INode, id: number) => unknown;
     cache: BuildCache;
   },
 ): INode | null {
@@ -390,7 +390,7 @@ export function buildNodeWithSN(
         node.appendChild(childNode);
       }
       if (afterAppend) {
-        afterAppend(childNode);
+        afterAppend(childNode, childN.id);
       }
     }
   }
@@ -436,7 +436,7 @@ function rebuild(
     doc: Document;
     onVisit?: (node: INode) => unknown;
     hackCss?: boolean;
-    afterAppend?: (n: INode) => unknown;
+    afterAppend?: (n: INode, id: number) => unknown;
     cache: BuildCache;
   },
 ): [Node | null, idNodeMap] {

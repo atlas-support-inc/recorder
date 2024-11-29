@@ -6,14 +6,14 @@ export declare function buildNodeWithSN(n: serializedNodeWithId, options: {
     map: idNodeMap;
     skipChild?: boolean;
     hackCss: boolean;
-    afterAppend?: (n: INode) => unknown;
+    afterAppend?: (n: INode, id: number) => unknown;
     cache: BuildCache;
 }): INode | null;
 declare function rebuild(n: serializedNodeWithId, options: {
     doc: Document;
     onVisit?: (node: INode) => unknown;
     hackCss?: boolean;
-    afterAppend?: (n: INode) => unknown;
+    afterAppend?: (n: INode, id: number) => unknown;
     cache: BuildCache;
 }): [Node | null, idNodeMap];
 export default rebuild;
