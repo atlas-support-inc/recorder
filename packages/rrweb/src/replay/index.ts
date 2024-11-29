@@ -153,7 +153,6 @@ export class Replayer {
     events: Array<eventWithTime | string>,
     config?: Partial<playerConfig>,
   ) {
-    console.log('Hello there, 19.11.24!');
     if (!config?.liveMode && events.length < 2) {
       throw new Error('Replayer need at least 2 events.');
     }

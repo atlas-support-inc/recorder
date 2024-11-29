@@ -29,7 +29,6 @@ async function getTransparentBlobFor(
   dataURLOptions: DataURLOptions,
 ): Promise<string> {
   const id = `${width}-${height}`;
-  console.log('got iddddd', id);
   if ('OffscreenCanvas' in globalThis) {
     if (transparentBlobMap.has(id)) return transparentBlobMap.get(id)!;
     const offscreen = new OffscreenCanvas(width, height);
@@ -50,10 +49,8 @@ const worker = (self as unknown) as ImageBitmapDataURLResponseWorker;
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 worker.onmessage = async function (e) {
-  console.log('globalThis', globalThis);
   if ('OffscreenCanvas' in globalThis) {
     const { id, bitmap, width, height, dataURLOptions } = e.data;
-    console.log('got here', e.data);
 
     const transparentBase64 = getTransparentBlobFor(
       width,

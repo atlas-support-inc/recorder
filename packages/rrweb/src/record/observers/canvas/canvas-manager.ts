@@ -74,7 +74,6 @@ export class CanvasManager {
       recordCanvas,
       dataURLOptions,
     } = options;
-    console.log('recordCanvas ====>', recordCanvas);
     this.mutationCb = options.mutationCb;
     this.mirror = options.mirror;
 
@@ -121,8 +120,6 @@ export class CanvasManager {
     );
     const snapshotInProgressMap: Map<number, boolean> = new Map();
     const worker = new ImageBitmapDataURLWorker() as ImageBitmapDataURLRequestWorker;
-
-    console.log('worker ====>', worker);
 
     worker.onmessage = (e) => {
       const { id } = e.data;

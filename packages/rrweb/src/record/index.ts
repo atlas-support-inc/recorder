@@ -71,7 +71,6 @@ function record<T = eventWithTime>(
     keepIframeSrcFn = () => false,
     mutationRateLimiterOptions,
   } = options;
-  console.log('INSIDE RECORD! ==>');
   // runtime checks for user options
   if (!emit) {
     throw new Error('emit function is required');
