@@ -53,7 +53,6 @@ export const deserializeCanvasArg = (
                     ctx,
                     preload,
                 )(arg.args);
-                // eslint-disable-next-line prefer-spread
                 return await createImageBitmap.apply(null, args);
             }
             if ('index' in arg) {
