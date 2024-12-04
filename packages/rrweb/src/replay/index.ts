@@ -77,7 +77,7 @@ import { applyDialogToTopLevel, removeDialogFromTopLevel } from './dialog';
 // This is a PostHog way to fix it: https://github.com/PostHog/posthog/pull/22942
 const shopifyShorthandCSSFix =
   '@media (prefers-reduced-motion: no-preference) { .scroll-trigger:not(.scroll-trigger--offscreen).animate--slide-in { animation: var(--animation-slide-in) } }';
-
+const canvasDisplayFallback = ':where(canvas) { display: inline-block; }';
 const hideCanvasChildrenExceptSnapshot =
   'canvas *:not(.rrweb-snapshot-canvas) { display: none; }';
 
@@ -168,6 +168,7 @@ export class Replayer {
       liveMode: false,
       insertStyleRules: [
         shopifyShorthandCSSFix,
+        canvasDisplayFallback,
         hideCanvasChildrenExceptSnapshot,
       ],
       triggerFocus: true,

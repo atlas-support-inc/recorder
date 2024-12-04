@@ -217,15 +217,21 @@ function buildNode(
           }
         } else {
           // handle internal attributes
-          if (tagName === 'canvas' && name === 'rr_dataURL') {
-            const image = document.createElement('img');
-            image.src = value;
-            image.onload = () => {
-              const ctx = (node as HTMLCanvasElement).getContext('2d');
-              if (ctx) {
-                ctx.drawImage(image, 0, 0, image.width, image.height);
-              }
-            };
+          if (tagName === 'canvas') {
+            if (name === 'rr_dataURL') {
+              const image = document.createElement('img');
+              image.src = value;
+              image.onload = () => {
+                const ctx = (node as HTMLCanvasElement).getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(image, 0, 0, image.width, image.height);
+                }
+              };
+            } else if (name === 'rr_canvasFallbackWidth') {
+              (node as HTMLCanvasElement).style.width = value;
+            } else if (name === 'rr_canvasFallbackHeight') {
+              (node as HTMLCanvasElement).style.height = value;
+            }
           } else if (tagName === 'img' && name === 'rr_dataURL') {
             const image = node as HTMLImageElement;
             if (!image.currentSrc.startsWith('data:')) {
