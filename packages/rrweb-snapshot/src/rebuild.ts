@@ -217,21 +217,15 @@ function buildNode(
           }
         } else {
           // handle internal attributes
-          if (tagName === 'canvas') {
-            if (name === 'rr_dataURL') {
-              const image = document.createElement('img');
-              image.src = value;
-              image.onload = () => {
-                const ctx = (node as HTMLCanvasElement).getContext('2d');
-                if (ctx) {
-                  ctx.drawImage(image, 0, 0, image.width, image.height);
-                }
-              };
-            } else if (name === 'rr_canvasFallbackWidth') {
-              (node as HTMLCanvasElement).style.width = value;
-            } else if (name === 'rr_canvasFallbackHeight') {
-              (node as HTMLCanvasElement).style.height = value;
-            }
+          if (tagName === 'canvas' && name === 'rr_dataURL') {
+            const image = document.createElement('img');
+            image.src = value;
+            image.onload = () => {
+              const ctx = (node as HTMLCanvasElement).getContext('2d');
+              if (ctx) {
+                ctx.drawImage(image, 0, 0, image.width, image.height);
+              }
+            };
           } else if (tagName === 'img' && name === 'rr_dataURL') {
             const image = node as HTMLImageElement;
             if (!image.currentSrc.startsWith('data:')) {
@@ -271,6 +265,18 @@ function buildNode(
             ); // keep this attribute for rrweb to trigger showModal
           }
         }
+      }
+      if (
+        tagName === 'canvas' &&
+        n.attributes.rr_canvasFallbackWidth &&
+        n.attributes.rr_canvasFallbackHeight
+      ) {
+        const canvasStyle = document.createElement('style');
+        const width = n.attributes.rr_canvasFallbackWidth;
+        const height = n.attributes.rr_canvasFallbackHeight;
+
+        canvasStyle.innerText = `:where(canvas) { width: ${width}; height: ${height}; }`;
+        node.appendChild(canvasStyle);
       }
       if (n.isShadowHost) {
         /**
