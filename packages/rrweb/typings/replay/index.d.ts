@@ -59,6 +59,7 @@ export declare class Replayer {
     private preloadImages;
     private deserializeAndPreloadCanvasEvents;
     private applyIncremental;
+    private applyCanvasDimensionStyles;
     private applyMutation;
     private applyScroll;
     private applyInput;

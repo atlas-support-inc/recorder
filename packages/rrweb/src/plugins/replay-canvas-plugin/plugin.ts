@@ -24,6 +24,18 @@ function isCanvasMutationEvent(e: eventWithTime): e is CanvasEventWithTime {
   );
 }
 
+function getMutatedCanvasIds(e: eventWithTime, canvasContainers: number[]) {
+  if (
+    e.type === EventType.IncrementalSnapshot &&
+    e.data.source === IncrementalSource.Mutation
+  ) {
+    const attributeIds = e.data.attributes.map((attr) => attr.id);
+    return canvasContainers.filter((id) => attributeIds.includes(id));
+  }
+
+  return [];
+}
+
 class InvalidCanvasNodeError extends Error {}
 
 /**
@@ -64,7 +76,9 @@ function findIndex(
  *    - copies outside canvas to iframe canvas
  *    - this avoids having to remove iframe sandbox
  */
-export function CanvasReplayerPlugin(rrwebReplayer: Replayer | null): ReplayPlugin {
+export function CanvasReplayerPlugin(
+  rrwebReplayer: Replayer | null,
+): ReplayPlugin {
   const PRELOAD_SIZE = 50;
   const BUFFER_TIME = 20_000;
   const canvases = new Map<number, HTMLCanvasElement>();
@@ -75,7 +89,8 @@ export function CanvasReplayerPlugin(rrwebReplayer: Replayer | null): ReplayPlug
   // the ability to jump around the playback
   const canvasEventMap = new Map<CanvasEventWithTime, canvasMutationParam>();
   const getCanvasMutationEvents = (): CanvasEventWithTime[] =>
-    rrwebReplayer?.service.state.context.events.filter(isCanvasMutationEvent) || [];
+    rrwebReplayer?.service.state.context.events.filter(isCanvasMutationEvent) ||
+    [];
   // `deserializeAndPreloadCanvasEvents()` is async and `preload()` can be
   // called before the previous call finishes, so we use this Set to determine
   // if a deserialization of an event is in progress so that it can be skipped if so.
@@ -214,37 +229,32 @@ export function CanvasReplayerPlugin(rrwebReplayer: Replayer | null): ReplayPlug
   //
   // `handleQueue` is really a map of canvas id -> most recent canvas mutation
   // event for all canvas mutation events before the current replay time
-  const debouncedProcessQueuedEvents = debounce(
-    function processQueuedEvents() {
-      const canvasIds = Array.from(canvases.keys());
-      const queuedEventIds = Array.from(handleQueue.keys());
-      const queuedEventIdsSet = new Set(queuedEventIds);
-      const unusedCanvases = canvasIds.filter(
-        (id) => !queuedEventIdsSet.has(id),
-      );
+  const debouncedProcessQueuedEvents = debounce(function processQueuedEvents() {
+    const canvasIds = Array.from(canvases.keys());
+    const queuedEventIds = Array.from(handleQueue.keys());
+    const queuedEventIdsSet = new Set(queuedEventIds);
+    const unusedCanvases = canvasIds.filter((id) => !queuedEventIdsSet.has(id));
 
-      // Compare the canvas ids from canvas mutation events against existing
-      // canvases and remove the canvas snapshot for previously drawn to
-      // canvases that do not currently exist in this new point of time
-      unusedCanvases.forEach((id) => {
-        const el = containers.get(id);
-        if (el) {
-          el.src = '';
-        }
-      });
+    // Compare the canvas ids from canvas mutation events against existing
+    // canvases and remove the canvas snapshot for previously drawn to
+    // canvases that do not currently exist in this new point of time
+    unusedCanvases.forEach((id) => {
+      const el = containers.get(id);
+      if (el) {
+        el.src = '';
+      }
+    });
 
-      // Find all canvases with an event that needs to process
-      Array.from(handleQueue.entries()).forEach(async ([id, [e, replayer]]) => {
-        try {
-          await processEvent(e, { replayer });
-          handleQueue.delete(id);
-        } catch (err) {
-          handleProcessEventError(err);
-        }
-      });
-    },
-    250,
-  );
+    // Find all canvases with an event that needs to process
+    Array.from(handleQueue.entries()).forEach(async ([id, [e, replayer]]) => {
+      try {
+        await processEvent(e, { replayer });
+        handleQueue.delete(id);
+      } catch (err) {
+        handleProcessEventError(err);
+      }
+    });
+  }, 250);
 
   /**
    * In the case where mirror DOM is built, we only want to process the most
@@ -317,6 +327,11 @@ export function CanvasReplayerPlugin(rrwebReplayer: Replayer | null): ReplayPlug
       }
 
       if (node.nodeName === 'CANVAS' && node.nodeType === 1) {
+        // Make sure that cloned canvas is up to date, re-clone if exists
+        if (canvases.has(id)) {
+          cloneCanvas(id, (node as unknown) as HTMLCanvasElement);
+        }
+
         // Add new image container that will be written to
         const el = containers.get(id) || document.createElement('img');
         (node as HTMLCanvasElement).appendChild(el);
@@ -343,6 +358,16 @@ export function CanvasReplayerPlugin(rrwebReplayer: Replayer | null): ReplayPlug
       { replayer }: { replayer: Replayer },
     ) => {
       const isCanvas = isCanvasMutationEvent(e);
+      const mutatedCanvasIds = getMutatedCanvasIds(e, [...containers.keys()]);
+
+      if (mutatedCanvasIds.length > 0) {
+        mutatedCanvasIds.forEach((id) => {
+          cloneCanvas(
+            id,
+            (replayer.getMirror().getNode(id) as unknown) as HTMLCanvasElement,
+          );
+        });
+      }
 
       // isSync = true means it is fast forwarding vs playing
       // nothing to do when fast forwarding since canvas mutations for us are
@@ -366,7 +391,9 @@ export function CanvasReplayerPlugin(rrwebReplayer: Replayer | null): ReplayPlug
         return;
       }
 
-      processEvent(e as CanvasEventWithTime, { replayer }).catch(handleProcessEventError);
+      processEvent(e as CanvasEventWithTime, { replayer }).catch(
+        handleProcessEventError,
+      );
     },
   };
 }

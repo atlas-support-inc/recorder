@@ -332,6 +332,7 @@ export class TreeIndex {
   private scrollMap!: Map<number, scrollData>;
   private inputMap!: Map<number, inputData>;
   private dialogMap!: Map<number, attributeMutation>;
+  private canvasAttributesMap!: Map<number, attributeMutation['attributes']>;
 
   constructor() {
     this.reset();
@@ -427,11 +428,21 @@ export class TreeIndex {
     this.dialogMap.set(d.id, d);
   }
 
+  public canvasAttribute(d: attributeMutation) {
+    const existingAttribute = this.canvasAttributesMap.get(d.id);
+    if (existingAttribute) {
+      this.canvasAttributesMap.set(d.id, Object.assign(existingAttribute, d.attributes));
+    } else {
+      this.canvasAttributesMap.set(d.id, d.attributes);
+    }
+  }
+
   public flush(): {
     mutationData: mutationData;
     scrollMap: TreeIndex['scrollMap'];
     inputMap: TreeIndex['inputMap'];
     dialogMap: TreeIndex['dialogMap'];
+    canvasAttributesMap: TreeIndex['canvasAttributesMap'];
   } {
     const {
       tree,
@@ -488,6 +499,7 @@ export class TreeIndex {
     const scrollMap = new Map(this.scrollMap);
     const inputMap = new Map(this.inputMap);
     const dialogMap = new Map(this.dialogMap);
+    const canvasAttributesMap = new Map(this.canvasAttributesMap);
 
     this.reset();
 
@@ -496,6 +508,7 @@ export class TreeIndex {
       scrollMap,
       inputMap,
       dialogMap,
+      canvasAttributesMap,
     };
   }
 
@@ -509,6 +522,7 @@ export class TreeIndex {
     this.scrollMap = new Map();
     this.inputMap = new Map();
     this.dialogMap = new Map();
+    this.canvasAttributesMap = new Map();
   }
 
   public idRemoved(id: number): boolean {
@@ -681,7 +695,10 @@ export function asyncLoop<T>(
     typeof nextCallbackId === 'number' && cancelFn(nextCallbackId);
   const processNextEvent = () => {
     const start = performance.now();
-    while (index < all.length && performance.now() - start < asyncLoopMaxFreezeTime) {
+    while (
+      index < all.length &&
+      performance.now() - start < asyncLoopMaxFreezeTime
+    ) {
       fn(all[index], index);
       index++;
     }

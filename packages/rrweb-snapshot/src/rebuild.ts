@@ -272,6 +272,8 @@ function buildNode(
         n.attributes.rr_canvasFallbackHeight
       ) {
         const canvasStyle = document.createElement('style');
+        canvasStyle.setAttribute('rr-canvas-style', '1');
+
         const canvasClass = `canvas-${Math.random().toString(36).substr(2, 9)}`;
         const width = n.attributes.rr_canvasFallbackWidth;
         const height = n.attributes.rr_canvasFallbackHeight;

@@ -33,6 +33,7 @@ export declare class TreeIndex {
     private scrollMap;
     private inputMap;
     private dialogMap;
+    private canvasAttributesMap;
     constructor();
     add(mutation: addedNodeMutation): void;
     remove(mutation: removedNodeMutation, mirror: Mirror): void;
@@ -41,11 +42,13 @@ export declare class TreeIndex {
     scroll(d: scrollData): void;
     input(d: inputData): void;
     dialog(d: attributeMutation): void;
+    canvasAttribute(d: attributeMutation): void;
     flush(): {
         mutationData: mutationData;
         scrollMap: TreeIndex['scrollMap'];
         inputMap: TreeIndex['inputMap'];
         dialogMap: TreeIndex['dialogMap'];
+        canvasAttributesMap: TreeIndex['canvasAttributesMap'];
     };
     private reset;
     idRemoved(id: number): boolean;

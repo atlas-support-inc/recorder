@@ -105,6 +105,13 @@ function indicatesTouchDevice(e: eventWithTime) {
   );
 }
 
+function replaceStyleValue(text: string, key: string, value: string | number) {
+  return text.replace(
+    new RegExp(`${key}:\\s*\\d+(\\.\\d+)?[^;]*;`),
+    `${key}: ${value}px;`,
+  );
+}
+
 export class Replayer {
   public wrapper: HTMLDivElement;
   public iframe: HTMLIFrameElement;
@@ -153,6 +160,7 @@ export class Replayer {
     events: Array<eventWithTime | string>,
     config?: Partial<playerConfig>,
   ) {
+    console.log('HEY IN REPLAYER! 05.12');
     if (!config?.liveMode && events.length < 2) {
       throw new Error('Replayer need at least 2 events.');
     }
@@ -191,7 +199,12 @@ export class Replayer {
     this.virtualStyleRulesMap = new Map();
 
     this.emitter.on(ReplayerEvents.Flush, () => {
-      const { scrollMap, inputMap, dialogMap } = this.treeIndex.flush();
+      const {
+        scrollMap,
+        inputMap,
+        dialogMap,
+        canvasAttributesMap,
+      } = this.treeIndex.flush();
 
       this.fragmentParentMap.forEach((parent, frag) =>
         this.restoreRealParent(frag, parent),
@@ -212,6 +225,12 @@ export class Replayer {
       }
       for (const d of dialogMap.values()) {
         this.applyDialog(d);
+      }
+      for (const [id, attributes] of canvasAttributesMap.entries()) {
+        this.applyCanvasDimensionStyles(
+          this.mirror.getNode(id),
+          attributes as Record<string, string | number>,
+        );
       }
     });
     this.emitter.on(ReplayerEvents.PlayBack, () => {
@@ -1408,6 +1427,31 @@ export class Replayer {
     }
   }
 
+  private applyCanvasDimensionStyles(
+    target: INode | null,
+    attrs: Record<string, string | number>,
+  ) {
+    if (!target) {
+      return;
+    }
+
+    const styleEl: HTMLStyleElement | null = ((target as Node) as HTMLCanvasElement).querySelector(
+      'style[rr-canvas-style]',
+    );
+
+    if (styleEl) {
+      Object.entries(attrs).forEach(([attributeName, value]) => {
+        if (['width', 'height'].includes(attributeName)) {
+          styleEl.innerText = replaceStyleValue(
+            styleEl.innerText,
+            attributeName,
+            value,
+          );
+        }
+      });
+    }
+  }
+
   private applyMutation(d: mutationData, useVirtualParent: boolean) {
     d.removes.forEach((mutation) => {
       let target = this.mirror.getNode(mutation.id);
@@ -1749,6 +1793,16 @@ export class Replayer {
           } else if (typeof value === 'string') {
             try {
               ((target as Node) as Element).setAttribute(attributeName, value);
+
+              if (target.nodeName === 'CANVAS') {
+                if (useVirtualParent) {
+                  this.treeIndex.canvasAttribute(mutation);
+                } else {
+                  this.applyCanvasDimensionStyles(target, {
+                    [attributeName]: value,
+                  });
+                }
+              }
 
               if (
                 attributeName === 'rr_open_mode' &&
