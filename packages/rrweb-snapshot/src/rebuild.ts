@@ -266,6 +266,22 @@ function buildNode(
           }
         }
       }
+      if (
+        tagName === 'canvas' &&
+        n.attributes.rr_canvasFallbackWidth &&
+        n.attributes.rr_canvasFallbackHeight
+      ) {
+        const canvasStyle = document.createElement('style');
+        canvasStyle.setAttribute('rr-canvas-style', '1');
+
+        const canvasClass = `canvas-${Math.random().toString(36).substr(2, 9)}`;
+        const width = n.attributes.rr_canvasFallbackWidth;
+        const height = n.attributes.rr_canvasFallbackHeight;
+
+        canvasStyle.innerText = `:where(canvas.${canvasClass}) { width: ${width}; height: ${height}; }`;
+        node.classList.add(canvasClass);
+        node.appendChild(canvasStyle);
+      }
       if (n.isShadowHost) {
         /**
          * Since node is newly rebuilt, it should be a normal element
@@ -311,7 +327,7 @@ export function buildNodeWithSN(
     map: idNodeMap;
     skipChild?: boolean;
     hackCss: boolean;
-    afterAppend?: (n: INode) => unknown;
+    afterAppend?: (n: INode, id: number) => unknown;
     cache: BuildCache;
   },
 ): INode | null {
@@ -390,7 +406,7 @@ export function buildNodeWithSN(
         node.appendChild(childNode);
       }
       if (afterAppend) {
-        afterAppend(childNode);
+        afterAppend(childNode, childN.id);
       }
     }
   }
@@ -436,7 +452,7 @@ function rebuild(
     doc: Document;
     onVisit?: (node: INode) => unknown;
     hackCss?: boolean;
-    afterAppend?: (n: INode) => unknown;
+    afterAppend?: (n: INode, id: number) => unknown;
     cache: BuildCache;
   },
 ): [Node | null, idNodeMap] {

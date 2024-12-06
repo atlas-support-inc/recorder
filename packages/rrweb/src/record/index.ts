@@ -18,10 +18,12 @@ import {
   listenerHandler,
   mutationCallbackParam,
   scrollCallback,
+  canvasMutationParam,
 } from '../types';
 import { IframeManager } from './iframe-manager';
 import { ShadowDomManager } from './shadow-dom-manager';
 import { MutationRateLimiter } from './mutation-rate-limiter';
+import { CanvasManager } from './observers/canvas/canvas-manager';
 
 function wrapEvent(e: event): eventWithTime {
   return {
@@ -59,6 +61,7 @@ function record<T = eventWithTime>(
     hooks,
     packFn,
     sampling = {},
+    dataURLOptions = {},
     mousemoveWait,
     recordCanvas = false,
     userTriggeredOnInput = false,
@@ -202,8 +205,30 @@ function record<T = eventWithTime>(
       }),
     );
 
+  const wrappedCanvasMutationEmit = (p: canvasMutationParam) =>
+    wrappedEmit(
+      wrapEvent({
+        type: EventType.IncrementalSnapshot,
+        data: {
+          source: IncrementalSource.CanvasMutation,
+          ...p,
+        },
+      }),
+    );
+
   const iframeManager = new IframeManager({
     mutationCb: wrappedMutationEmit,
+  });
+
+  const canvasManager = new CanvasManager({
+    recordCanvas,
+    mutationCb: wrappedCanvasMutationEmit,
+    win: window,
+    blockClass,
+    blockSelector,
+    mirror,
+    sampling: sampling.canvas,
+    dataURLOptions,
   });
 
   const shadowDomManager = new ShadowDomManager({
@@ -217,6 +242,7 @@ function record<T = eventWithTime>(
       maskAll,
       inlineStylesheet,
       maskInputOptions,
+      dataURLOptions,
       maskTextFn,
       maskInputFn,
       maskImageFn,
@@ -225,6 +251,7 @@ function record<T = eventWithTime>(
       sampling,
       slimDOMOptions,
       iframeManager,
+      canvasManager,
     },
     mirror,
   });
@@ -257,6 +284,7 @@ function record<T = eventWithTime>(
       maskTextFn,
       maskImageFn,
       slimDOM: slimDOMOptions,
+      dataURLOptions,
       recordCanvas,
       inlineImages,
       onSerialize: (n) => {
@@ -393,16 +421,7 @@ function record<T = eventWithTime>(
                 },
               }),
             ),
-          canvasMutationCb: (p) =>
-            wrappedEmit(
-              wrapEvent({
-                type: EventType.IncrementalSnapshot,
-                data: {
-                  source: IncrementalSource.CanvasMutation,
-                  ...p,
-                },
-              }),
-            ),
+          canvasMutationCb: wrappedCanvasMutationEmit,
           fontCb: (p) =>
             wrappedEmit(
               wrapEvent({
@@ -431,9 +450,11 @@ function record<T = eventWithTime>(
           maskImageFn,
           blockSelector,
           slimDOMOptions,
+          dataURLOptions,
           mirror,
           iframeManager,
           shadowDomManager,
+          canvasManager,
           plugins:
             plugins?.map((p) => ({
               observer: p.observer,

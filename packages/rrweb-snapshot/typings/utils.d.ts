@@ -18,3 +18,4 @@ export declare function maskImage({ n, attributes, maskImageFn, }: {
     attributes: attributes;
     maskImageFn?: MaskImageFn;
 }): attributes;
+export declare function is2DCanvasBlank(canvas: HTMLCanvasElement): boolean;

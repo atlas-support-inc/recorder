@@ -12,6 +12,7 @@ import {
   MaskTextFn,
   MaskInputFn,
   MaskImageFn,
+  DataURLOptions,
 } from 'rrweb-snapshot';
 import {
   mutationRecord,
@@ -33,6 +34,7 @@ import {
   hasShadowRoot,
 } from '../utils';
 import { IframeManager } from './iframe-manager';
+import { CanvasManager } from './observers/canvas/canvas-manager';
 import { ShadowDomManager } from './shadow-dom-manager';
 
 type DoubleLinkedListNode = {
@@ -178,11 +180,13 @@ export default class MutationBuffer {
   private recordCanvas: boolean;
   private inlineImages: boolean;
   private slimDOMOptions: SlimDOMOptions;
+  private dataURLOptions: DataURLOptions;
   private doc: Document;
 
   private mirror: Mirror;
   private iframeManager: IframeManager;
   private shadowDomManager: ShadowDomManager;
+  private canvasManager: CanvasManager;
 
   public init(
     cb: mutationCallBack,
@@ -199,10 +203,12 @@ export default class MutationBuffer {
     recordCanvas: boolean,
     inlineImages: boolean,
     slimDOMOptions: SlimDOMOptions,
+    dataURLOptions: DataURLOptions,
     doc: Document,
     mirror: Mirror,
     iframeManager: IframeManager,
     shadowDomManager: ShadowDomManager,
+    canvasManager: CanvasManager,
   ) {
     this.blockClass = blockClass;
     this.blockSelector = blockSelector;
@@ -222,14 +228,18 @@ export default class MutationBuffer {
     this.mirror = mirror;
     this.iframeManager = iframeManager;
     this.shadowDomManager = shadowDomManager;
+    this.canvasManager = canvasManager;
+    this.dataURLOptions = dataURLOptions;
   }
 
   public freeze() {
     this.frozen = true;
+    this.canvasManager.freeze();
   }
 
   public unfreeze() {
     this.frozen = false;
+    this.canvasManager.unfreeze();
     this.emit();
   }
 
@@ -239,16 +249,22 @@ export default class MutationBuffer {
 
   public lock() {
     this.locked = true;
+    this.canvasManager.lock();
   }
 
   public unlock() {
     this.locked = false;
+    this.canvasManager.unlock();
     this.emit();
   }
 
+  public reset() {
+    this.canvasManager.reset();
+  }
+
   public processMutations = (mutations: mutationRecord[]) => {
-    mutations.forEach(this.processMutation);
-    this.emit();
+    mutations.forEach(this.processMutation); // adds mutations to the buffer
+    this.emit(); // clears buffer if not locked/frozen
   };
 
   public emit = () => {

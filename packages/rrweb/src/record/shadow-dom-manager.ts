@@ -12,9 +12,11 @@ import {
   MaskTextFn,
   MaskInputFn,
   MaskImageFn,
+  DataURLOptions,
 } from 'rrweb-snapshot';
 import { IframeManager } from './iframe-manager';
 import { initMutationObserver, initScrollObserver } from './observer';
+import { CanvasManager } from './observers/canvas/canvas-manager';
 
 type BypassOptions = {
   blockClass: blockClass;
@@ -27,11 +29,13 @@ type BypassOptions = {
   maskTextFn: MaskTextFn | undefined;
   maskInputFn: MaskInputFn | undefined;
   maskImageFn?: MaskImageFn;
+  dataURLOptions: DataURLOptions;
   recordCanvas: boolean;
   inlineImages: boolean;
   sampling: SamplingStrategy;
   slimDOMOptions: SlimDOMOptions;
   iframeManager: IframeManager;
+  canvasManager: CanvasManager;
 };
 
 export class ShadowDomManager {
@@ -69,9 +73,11 @@ export class ShadowDomManager {
       this.bypassOptions.recordCanvas,
       this.bypassOptions.inlineImages,
       this.bypassOptions.slimDOMOptions,
+      this.bypassOptions.dataURLOptions,
       this.mirror,
       this.bypassOptions.iframeManager,
       this,
+      this.bypassOptions.canvasManager,
       shadowRoot,
     );
     initScrollObserver(

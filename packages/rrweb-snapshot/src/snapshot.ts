@@ -12,8 +12,11 @@ import {
   KeepIframeSrcFn,
   MaskImageFn,
   DialogAttributes,
+  ICanvas,
+  DataURLOptions,
 } from './types';
 import {
+  is2DCanvasBlank,
   isElement,
   isShadowRoot,
   maskImage,
@@ -548,14 +551,47 @@ function serializeNode(
         // register what type of dialog is this
         // `modal` or `non-modal`
         // this is used to trigger `showModal()` or `show()` on replay (outside of rrweb-snapshot, in rrweb)
-        (attributes as DialogAttributes).rr_open_mode = (n as HTMLDialogElement).matches('dialog:modal')
+        (attributes as DialogAttributes).rr_open_mode = (n as HTMLDialogElement).matches(
+          'dialog:modal',
+        )
           ? 'modal'
           : 'non-modal';
       }
 
       // canvas image data
-      if (tagName === 'canvas' && recordCanvas) {
-        attributes.rr_dataURL = (n as HTMLCanvasElement).toDataURL();
+      if (tagName === 'canvas') {
+        const canvas = n as HTMLCanvasElement;
+        const computed = window.getComputedStyle(canvas);
+
+        if (!canvas.style.width) {
+          attributes.rr_canvasFallbackWidth = computed.width;
+        }
+        if (!canvas.style.height) {
+          attributes.rr_canvasFallbackHeight = computed.height;
+        }
+
+        if (recordCanvas) {
+          if ((n as ICanvas).__context === '2d') {
+            // only record this on 2d canvas
+            if (!is2DCanvasBlank(n as HTMLCanvasElement)) {
+              attributes.rr_dataURL = (n as HTMLCanvasElement).toDataURL();
+            }
+          } else if (!('__context' in n)) {
+            // context is unknown, better not call getContext to trigger it
+            const canvasDataURL = (n as HTMLCanvasElement).toDataURL();
+
+            // create blank canvas of same dimensions
+            const blankCanvas = document.createElement('canvas');
+            blankCanvas.width = (n as HTMLCanvasElement).width;
+            blankCanvas.height = (n as HTMLCanvasElement).height;
+            const blankCanvasDataURL = blankCanvas.toDataURL();
+
+            // no need to save dataURL if it's the same as blank canvas
+            if (canvasDataURL !== blankCanvasDataURL) {
+              attributes.rr_dataURL = canvasDataURL;
+            }
+          }
+        }
       }
       if (tagName === 'img') {
         const needsMasking = needMaskingText(
@@ -1028,6 +1064,7 @@ function snapshot(
     maskInputFn?: MaskTextFn;
     maskImageFn?: MaskImageFn;
     slimDOM?: boolean | SlimDOMOptions;
+    dataURLOptions?: DataURLOptions;
     inlineImages?: boolean;
     recordCanvas?: boolean;
     preserveWhiteSpace?: boolean;

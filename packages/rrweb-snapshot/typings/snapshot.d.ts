@@ -1,4 +1,4 @@
-import { serializedNodeWithId, INode, idNodeMap, MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, KeepIframeSrcFn, MaskImageFn } from './types';
+import { serializedNodeWithId, INode, idNodeMap, MaskInputOptions, SlimDOMOptions, MaskTextFn, MaskInputFn, KeepIframeSrcFn, MaskImageFn, DataURLOptions } from './types';
 export declare const IGNORED_NODE = -2;
 export declare function absoluteToStylesheet(cssText: string | null, href: string): string;
 export declare function absoluteToDoc(doc: Document, attributeValue: string): string;
@@ -39,6 +39,7 @@ declare function snapshot(n: Document, options?: {
     maskInputFn?: MaskTextFn;
     maskImageFn?: MaskImageFn;
     slimDOM?: boolean | SlimDOMOptions;
+    dataURLOptions?: DataURLOptions;
     inlineImages?: boolean;
     recordCanvas?: boolean;
     preserveWhiteSpace?: boolean;

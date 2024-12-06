@@ -1,9 +1,11 @@
 import record from './record';
 import { Replayer } from './replay';
+import canvasMutation from './replay/canvas';
 import { _mirror } from './utils';
 import * as utils from './utils';
 import * as replayUtils from './replay/utils';
+import { CanvasReplayerPlugin } from './plugins/replay-canvas-plugin/plugin';
 export { EventType, IncrementalSource, MouseInteractions, ReplayerEvents, } from './types';
 declare const addCustomEvent: <T>(tag: string, payload: T) => void;
 declare const freezePage: () => void;
-export { record, addCustomEvent, freezePage, Replayer, _mirror as mirror, utils, replayUtils, };
+export { record, addCustomEvent, freezePage, Replayer, _mirror as mirror, utils, replayUtils, canvasMutation, CanvasReplayerPlugin, };

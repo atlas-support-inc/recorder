@@ -1,9 +1,10 @@
 /// <reference types="css-font-loading-module" />
-import { serializedNodeWithId, idNodeMap, INode, MaskInputOptions, SlimDOMOptions, MaskInputFn, MaskTextFn, MaskImageFn } from 'rrweb-snapshot';
+import { serializedNodeWithId, idNodeMap, INode, MaskInputOptions, SlimDOMOptions, MaskInputFn, MaskTextFn, MaskImageFn, DataURLOptions } from 'rrweb-snapshot';
 import { PackFn, UnpackFn } from './packer/base';
 import { IframeManager } from './record/iframe-manager';
 import { ShadowDomManager } from './record/shadow-dom-manager';
 import type { Replayer } from './replay';
+import { CanvasManager } from './record/observers/canvas/canvas-manager';
 export declare enum EventType {
     DomContentLoaded = 0,
     Load = 1,
@@ -126,6 +127,7 @@ export declare type SamplingStrategy = Partial<{
     media: number;
     input: 'all' | 'last' | 'debounce';
     inputDebounce: number;
+    canvas: 'all' | number;
 }>;
 export declare type RecordPlugin<TOptions = unknown> = {
     name: string;
@@ -159,6 +161,7 @@ export declare type recordOptions<T> = {
     hooks?: hooksParam;
     packFn?: PackFn;
     sampling?: SamplingStrategy;
+    dataURLOptions?: DataURLOptions;
     recordCanvas?: boolean;
     userTriggeredOnInput?: boolean;
     collectFonts?: boolean;
@@ -197,10 +200,12 @@ export declare type observerParam = {
     userTriggeredOnInput: boolean;
     collectFonts: boolean;
     slimDOMOptions: SlimDOMOptions;
+    dataURLOptions: DataURLOptions;
     doc: Document;
     mirror: Mirror;
     iframeManager: IframeManager;
     shadowDomManager: ShadowDomManager;
+    canvasManager: CanvasManager;
     plugins: Array<{
         observer: Function;
         callback: Function;
@@ -297,11 +302,50 @@ export declare enum MouseInteractions {
     TouchEnd = 9,
     TouchCancel = 10
 }
+export declare enum CanvasContext {
+    '2D' = 0,
+    WebGL = 1,
+    WebGL2 = 2
+}
+export declare type SerializedCanvasArg = {
+    rr_type: 'ArrayBuffer';
+    base64: string;
+} | {
+    rr_type: 'Blob';
+    data: Array<CanvasArg>;
+    type?: string;
+} | {
+    rr_type: string;
+    src: string;
+} | {
+    rr_type: string;
+    args: Array<CanvasArg>;
+} | {
+    rr_type: string;
+    index: number;
+};
+export declare type CanvasArg = SerializedCanvasArg | string | number | boolean | null | CanvasArg[];
 declare type mouseInteractionParam = {
     type: MouseInteractions;
     id: number;
     x: number;
     y: number;
+};
+export declare type ImageBitmapDataURLWorkerParams = {
+    id: number;
+    bitmap: ImageBitmap;
+    width: number;
+    height: number;
+    dataURLOptions: DataURLOptions;
+};
+export declare type ImageBitmapDataURLWorkerResponse = {
+    id: number;
+} | {
+    id: number;
+    type: string;
+    base64: string;
+    width: number;
+    height: number;
 };
 export declare type mouseInteractionCallBack = (d: mouseInteractionParam) => void;
 export declare type scrollPosition = {
@@ -336,13 +380,24 @@ export declare type styleDeclarationParam = {
     };
 };
 export declare type styleDeclarationCallback = (s: styleDeclarationParam) => void;
-export declare type canvasMutationCallback = (p: canvasMutationParam) => void;
-export declare type canvasMutationParam = {
-    id: number;
+export declare type canvasMutationCommand = {
     property: string;
     args: Array<unknown>;
     setter?: true;
 };
+export declare type canvasMutationParam = {
+    id: number;
+    type: CanvasContext;
+    commands: canvasMutationCommand[];
+} | ({
+    id: number;
+    type: CanvasContext;
+} & canvasMutationCommand);
+export declare type canvasMutationWithType = {
+    type: CanvasContext;
+} & canvasMutationCommand;
+export declare type canvasMutationCallback = (p: canvasMutationParam) => void;
+export declare type canvasManagerMutationCallback = (target: HTMLCanvasElement, p: canvasMutationWithType) => void;
 export declare type fontParam = {
     family: string;
     fontSource: string;
@@ -399,6 +454,10 @@ export declare type listenerHandler = () => void;
 export declare type hookResetter = () => void;
 export declare type ReplayPlugin = {
     handler: (event: eventWithTime, isSync: boolean, context: {
+        replayer: Replayer;
+    }) => void;
+    onBuild?: (node: Node, context: {
+        id: number;
         replayer: Replayer;
     }) => void;
 };

@@ -88,6 +88,10 @@ export interface INode extends Node {
   __sn_atlas: serializedNodeWithId;
 }
 
+export interface ICanvas extends HTMLCanvasElement {
+  __context: string;
+}
+
 export type idNodeMap = {
   [key: number]: INode;
 };
@@ -125,9 +129,17 @@ export type SlimDOMOptions = Partial<{
   headMetaVerification: boolean;
 }>;
 
+export type DataURLOptions = Partial<{
+  type: string;
+  quality: number;
+}>;
+
 export type MaskTextFn = (text: string) => string;
 export type MaskInputFn = (text: string) => string;
-export type MaskImageFn = (n: HTMLImageElement, attributes: attributes) => attributes;
+export type MaskImageFn = (
+  n: HTMLImageElement,
+  attributes: attributes,
+) => attributes;
 
 export type KeepIframeSrcFn = (src: string) => boolean;
 
