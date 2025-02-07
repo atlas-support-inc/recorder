@@ -82,7 +82,9 @@ export const ErrorStackParser = {
     } else if (error.stack) {
       return this.parseFFOrSafari(error as { stack: string });
     } else {
-      throw new Error('Cannot parse given Error object');
+      // TODO: @atlas this was silenced but we need to figure out what to do with it (https://github.com/PostHog/posthog-js/issues/643)
+      // throw new Error('Cannot parse given Error object');
+      return [];
     }
   },
   // Separate line and column numbers from a string of the form: (URI:Line:Column)
