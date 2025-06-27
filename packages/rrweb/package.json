@@ -1,5 +1,5 @@
 {
-  "name": "rrweb",
+  "name": "@atlasinc/rrweb",
   "version": "1.1.29",
   "description": "record and replay the web",
   "scripts": {
