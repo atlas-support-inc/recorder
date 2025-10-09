@@ -23,6 +23,7 @@ type LogRecordOptions = {
   lengthThreshold?: number;
   stringifyOptions?: StringifyOptions;
   logger?: Logger | 'console';
+  ignoreLogPatterns?: (string | RegExp)[];
 };
 
 const defaultLogOptions: LogRecordOptions = {
@@ -58,6 +59,29 @@ export type LogData = {
 };
 
 type logCallback = (p: LogData) => void;
+
+/**
+ * Check if a log message should be ignored based on ignore patterns
+ * @param payload The log payload to check
+ * @param ignorePatterns Array of strings or RegExp patterns to match against
+ * @returns true if the log should be ignored, false otherwise
+ */
+function shouldIgnoreLog(payload: string[], ignorePatterns?: (string | RegExp)[]): boolean {
+  if (!ignorePatterns || ignorePatterns.length === 0) {
+    return false;
+  }
+
+  const message = payload.join(' ');
+
+  return ignorePatterns.some(pattern => {
+    if (typeof pattern === 'string') {
+      return message.includes(pattern);
+    } else if (pattern instanceof RegExp) {
+      return pattern.test(message);
+    }
+    return false;
+  });
+}
 
 export type LogLevel =
   | 'assert'
@@ -130,6 +154,11 @@ function initLogObserver(
           error,
         ).map((stackFrame: StackFrame) => stackFrame.toString());
         const payload = [stringify(message, logOptions.stringifyOptions)];
+        
+        if (shouldIgnoreLog(payload, logOptions.ignoreLogPatterns)) {
+          return;
+        }
+        
         cb({
           level: 'error',
           trace,
@@ -169,6 +198,11 @@ function initLogObserver(
           const payload = args.map((s) =>
             stringify(s, logOptions.stringifyOptions),
           );
+          
+          if (shouldIgnoreLog(payload, logOptions.ignoreLogPatterns)) {
+            return;
+          }
+          
           logCount++;
           if (logCount < logOptions.lengthThreshold!) {
             cb({
