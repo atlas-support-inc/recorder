@@ -9,6 +9,7 @@ declare type LogRecordOptions = {
     lengthThreshold?: number;
     stringifyOptions?: StringifyOptions;
     logger?: Logger | 'console';
+    ignoreLogPatterns?: (string | RegExp)[];
 };
 export declare type LogData = {
     level: LogLevel;
